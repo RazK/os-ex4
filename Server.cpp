@@ -5,6 +5,7 @@
 // Created by heimy4prez on 6/16/18.
 //
 
+#include <fcntl.h>
 #include "Server.h"
 #include "Protocol.h"
 
@@ -29,6 +30,57 @@ ErrorCode Server::_closeConnection(){
     return ErrorCode::FAIL;
 }
 
+ErrorCode Server::_ParseMessage(int socket)
+{
+    msg_type mtype;
+    ASSERT_READ(socket, &mtype, sizeof(msg_type));
+    switch (mtype)
+    {
+        case command_type::CREATE_GROUP:
+        {
+            std::string groupName(WA_MAX_NAME, 0);
+            std::string clientNamesList(WA_MAX_INPUT, 0);
+            ASSERT_SUCCESS(_ParseCreateGroup(groupName, clientNamesList), "Failed to parse "
+                    "create_group message\r\n");
+
+            ASSERT_SUCCESS(_HandleCreateGroup(groupName, clientNamesList), "Failed to handle "
+                    "create_group message\r\n");
+            break;
+        }
+        case command_type::SEND:
+        {
+            std::string targetName(WA_MAX_NAME, 0);
+            std::string message(WA_MAX_MESSAGE, 0);
+            ASSERT_SUCCESS(_ParseSendMessage(targetName, message), "Failed to parse "
+                    "send_message message\r\n");
+
+            ASSERT_SUCCESS(_HandleSendMessage(targetName, message), "Failed to handle "
+                    "send_message message\r\n");
+            break;
+        }
+        case command_type::WHO:
+        {
+            ASSERT_SUCCESS(_HandleWho(), "Failed to handle who_message\r\n");
+            break;
+        }
+        case command_type::EXIT:
+        {
+            ASSERT_SUCCESS(_HandleExit(), "Failed to handle exit_message\r\n");
+            break;
+        }
+        default:
+        {
+            printf("Unrecognized message type\r\n");
+            return ErrorCode::FAIL;
+        }
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode _ParseName(int sock_fd, std::string& clientName){
+    ASSERT_READ(sock_fd, &clientName[0], WA_MAX_NAME);
+    return ErrorCode::SUCCESS;
+}
 
 ErrorCode Server::_ParseCreateGroup(std::string& groupName,
                                     std::string& listOfClientNames) const
@@ -36,41 +88,89 @@ ErrorCode Server::_ParseCreateGroup(std::string& groupName,
     name_len nameLen;
     clients_len clientsLen;
 
-    // Parse message
+    // Parse group-name length
     ASSERT_READ(_create_group_fd, &nameLen, sizeof(name_len));
+
+    // Assert length is legal
     ASSERT((0 <= nameLen &&
             nameLen <= WA_MAX_NAME), "Invalid group name length");
 
+    // Read group name
     ASSERT_READ(_create_group_fd, &groupName[0], nameLen);
+    groupName.resize(nameLen);
 
+    // Parse client-names length
     ASSERT_READ(_create_group_fd, &clientsLen, sizeof(clients_len));
-    ASSERT((0 <= listOfClientNames.length() &&
-            listOfClientNames.length() <= WA_MAX_MESSAGE
-                                          - sizeof(command_type)
-                                          - sizeof(name_len)
-                                          - nameLen
-                                          - sizeof(clients_len)),
+    clientsLen = ntohl(clientsLen);
+
+    // Assert length is legal
+    ASSERT((0 <= clientsLen &&
+            clientsLen <= WA_MAX_MESSAGE),
            "Invalid clients list length");
 
+    // Read client names
     ASSERT_READ(_create_group_fd, &listOfClientNames[0], clientsLen);
+    listOfClientNames.resize(clientsLen);
 
     return ErrorCode::SUCCESS;
 }
 ErrorCode Server::_ParseSendMessage(std::string& /* OUT */ targetName,
                                     std::string& /* OUT */ message) const {
+    name_len nameLen;
+    message_len messageLen;
+
+    // Parse group-name length
+    ASSERT_READ(_send_fd, &nameLen, sizeof(name_len));
+
+    // Assert length is legal
+    ASSERT((0 <= nameLen &&
+            nameLen <= WA_MAX_NAME), "Invalid target name length");
+
+    // Read group name
+    ASSERT_READ(_send_fd, &targetName[0], nameLen);
+    targetName.resize(nameLen);
+
+    // Parse client-names length
+    ASSERT_READ(_send_fd, &messageLen, sizeof(message_len));
+    messageLen = ntohs(messageLen);
+
+    // Assert length is legal
+    ASSERT((0 <= messageLen &&
+            messageLen <= WA_MAX_MESSAGE),
+           "Invalid message length");
+
+    // Read client names
+    ASSERT_READ(_send_fd, &message[0], messageLen);
+    message.resize(messageLen);
+
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode Server::_HandleCreateGroup(const std::string& groupName,
+                             const std::string& listOfClientNames)
+{
+    std::cout << "Server::_HandleCreateGroup\ngroupName : '"<< groupName << "'\nclientsList : '" <<
+                                                                                          listOfClientNames << "'\n\r" << std::endl;
     return ErrorCode::NOT_IMPLEMENTED;
 }
 
-ErrorCode Server::_ParseWho() const{
+ErrorCode Server::_HandleSendMessage(const std::string& targetName,
+                             const std::string& message)
+{
+    std::cout << "Server::_HandleSendMessage\ntarget : '" << targetName << "'\nmessage : '" <<
+              message << "'\n\r" << std::endl;
     return ErrorCode::NOT_IMPLEMENTED;
-
 }
 
-ErrorCode Server::_ParseExist() const {
+ErrorCode Server::_HandleWho()
+{
     return ErrorCode::NOT_IMPLEMENTED;
-
 }
 
+ErrorCode Server::_HandleExit()
+{
+    return ErrorCode::NOT_IMPLEMENTED;
+}
 
 ErrorCode Server::_establish(unsigned short port) {
 
@@ -79,7 +179,7 @@ ErrorCode Server::_establish(unsigned short port) {
         printf("gethostname failure in server establish connection");
         return ErrorCode::FAIL;
     }
-//    printf("MY HOST NAME: %serverSocketClient \n", myname);
+//    printf("MY HOST NAME: %s \n", myname);
 
     this->hp = gethostbyname(myname);
 
@@ -180,7 +280,7 @@ ErrorCode Server::_Run() {
     return FAIL;
 }
 
-//Server::Server() {
+Server::Server() {
 //    if (ErrorCode::SUCCESS != this->_establish(8080)){
 //        printf("failed to establish connection");
 //    }
@@ -198,21 +298,42 @@ ErrorCode Server::_Run() {
 //        if (n < 0) {
 //            printf("ERROR reading from socket");
 //        }
-//        printf("Here is the message: %serverSocketClient\n",buffer);
+//        printf("Here is the message: %s\n",buffer);
 //
 //        close(newsockfd);
-//        close(this->serverSocketClient);
+//        close(this->s);
 //    } else {
 //        printf("Negative communication socket\n");
 //        return ;
 //    }
-//
-//
-//}
 
-Server::~Server() {
+    // TODO: REMOVE THESE LINES
+    this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
+                                                                               O_NONBLOCK);
+    if (this->_create_group_fd == -1)
+    {
+        perror("open create_group.txt failed");
+    }
 
+    this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+    if (this->_send_fd == -1)
+    {
+        perror("open send.txt failed");
+    }
+
+    this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+    if (this->_who_fd == -1)
+    {
+        perror("open who.txt failed");
+    }
+
+    this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+    if (this->_exit_fd == -1)
+    {
+        perror("open exit.txt failed");
+    }
 }
+
 
 void Server::_serverStdInput() {
     std::string command;
@@ -244,8 +365,6 @@ ErrorCode Server::_HandleIncomingMessage(int socket) {
     _ParseMessage(socket);
     return FAIL;
 }
-
-
 
 
 

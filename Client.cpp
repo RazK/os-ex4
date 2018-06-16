@@ -29,28 +29,27 @@ Client::Client() {
     {
         perror("open failed");
     }
-
     this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
-                                                                              O_NONBLOCK);
-    if (this->_sock_fd == -1)
+                                                                               O_NONBLOCK);
+    if (this->_create_group_fd == -1)
     {
         perror("open create_group.txt failed");
     }
 
     this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_sock_fd == -1)
+    if (this->_send_fd == -1)
     {
         perror("open send.txt failed");
     }
 
     this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_sock_fd == -1)
+    if (this->_who_fd == -1)
     {
         perror("open who.txt failed");
     }
 
     this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_sock_fd == -1)
+    if (this->_exit_fd == -1)
     {
         perror("open exit.txt failed");
     }
@@ -59,7 +58,7 @@ Client::~Client() {}
 
 
 ErrorCode Client::_callSocket(char *hostname, unsigned short port) {
-    printf("HOST %serverSocketClient\n", hostname);
+    printf("HOST %s \n", hostname);
     this->hp= gethostbyname (hostname);
     if (this->hp == nullptr) {
         printf("failed to get host by name");
@@ -105,6 +104,7 @@ int Client::_readData(int n) {
     return(bcount);
 }
 
+
 ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
                                       const std::string& listOfClientNames)
 {
@@ -112,20 +112,16 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
     ASSERT((0 <= groupName.length() &&
             groupName.length() <= WA_MAX_NAME), "Invalid group name length");
     ASSERT((0 <= listOfClientNames.length() &&
-            listOfClientNames.length() <= WA_MAX_MESSAGE
-                                          - sizeof(command_type)
-                                          - sizeof(name_len)
-                                          - groupName.length()
-                                          - sizeof(clients_len)),
+            listOfClientNames.length() <= WA_MAX_INPUT),
            "Invalid clients list length");
 
     // Init empty message
-    CreateGroupMessage msg; // type = CREATE_GROUP
+    CreateGroupMessage msg; // msg_type = CREATE_GROUP
 
     // Build message
     msg.nameLen = groupName.length();
     msg.groupName = groupName.c_str();
-    msg.clientsLen = listOfClientNames.length(); //htonl(listOfClientNames.length());
+    msg.clientsLen = htonl(listOfClientNames.length()); //htonl(listOfClientNames.length());
     msg.clientNames = listOfClientNames.c_str();
 
     // Send message
@@ -143,19 +139,16 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     ASSERT((0 <= targetName.length() &&
             targetName.length() <= WA_MAX_NAME), "Invalid target name length");
     ASSERT((0 <= message.length() &&
-            message.length() <= WA_MAX_MESSAGE
-                                          - sizeof(command_type)
-                                          - targetName.length()
-                                          - sizeof(message_len)),
+            message.length() <= WA_MAX_MESSAGE),
            "Invalid message length");
 
     // Init empty message
-    SendMessage msg; // type = SEND
+    SendMessage msg; // msg_type = SEND
 
     // Build message
     msg.nameLen = targetName.length();
     msg.targetName = targetName.c_str();
-    msg.messageLen = htonl(message.length());
+    msg.messageLen = htons(message.length());
     msg.msg = message.c_str();
 
     // Send message
@@ -170,7 +163,7 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
 ErrorCode Client::_RequestWho() const
 {
     // Init empty message
-    WhoMessage msg; // type = WHO
+    WhoMessage msg; // msg_type = WHO
 
     // Send message
     ASSERT_WRITE(_who_fd, &msg.mtype, sizeof(msg.mtype));
@@ -180,7 +173,7 @@ ErrorCode Client::_RequestWho() const
 ErrorCode Client::_RequestExist() const
 {
     // Init empty message
-    ExitMessage msg; // type = Exit
+    ExitMessage msg; // msg_type = Exit
 
     // Send message
     ASSERT_WRITE(_exit_fd, &msg.mtype, sizeof(msg.mtype));

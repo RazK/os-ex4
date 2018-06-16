@@ -53,6 +53,7 @@ private:
 
     //methods
 public: // TODO: Raz: Resume private after done debugging
+    ErrorCode _TellName(const std::string& groupName);
     ErrorCode _RequestCreateGroup(const std::string& groupName,
                                   const std::string& listOfClientNames);
     ErrorCode _RequestSendMessage(const std::string& targetName, const std::string& message) const;

@@ -114,7 +114,7 @@ void print_error(const std::string& function_name, int error_number);
  * Description: Parse user input from the argument "command". The other arguments
  * are used as output of this function.
  * command: The user input
- * commandT: The command type
+ * commandT: The command msg_type
  * name: Name of the client/group
  * message: The message
  * clients: a vector containing the names of all clients

@@ -43,6 +43,6 @@ do {                                        \
 #define ASSERT_WRITE(fd, buf, count)        ASSERT(count == write(fd, buf, count), "Write error")
 #define ASSERT_READ(fd, buf, count)        ASSERT(count == read(fd, buf, count), "Read error")
 
-#define ASSERT_SUCCESS(f, msg)  ASSERT((ErrorCode::SUCCESS != (f)), msg)
+#define ASSERT_SUCCESS(f, msg)  ASSERT((ErrorCode::SUCCESS == (f)), msg)
 
 #endif //OSEX4_ERRORCODE_H
