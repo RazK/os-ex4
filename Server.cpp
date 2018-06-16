@@ -290,7 +290,7 @@ ErrorCode Server::_Run() {
     return FAIL;
 }
 
-Server::Server() {
+//Server::Server() {
 //    if (ErrorCode::SUCCESS != this->_establish(8080)){
 //        printf("failed to establish connection");
 //    }
@@ -317,38 +317,38 @@ Server::Server() {
 //        return ;
 //    }
 
-    // TODO: REMOVE THESE LINES
-    this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
-                                                                               O_NONBLOCK);
-    if (this->_create_group_fd == -1)
-    {
-        perror("open create_group.txt failed");
-    }
-
-    this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_send_fd == -1)
-    {
-        perror("open send.txt failed");
-    }
-
-    this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_who_fd == -1)
-    {
-        perror("open who.txt failed");
-    }
-
-    this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_exit_fd == -1)
-    {
-        perror("open exit.txt failed");
-    }
-}
+//    // TODO: REMOVE THESE LINES
+//    this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
+//                                                                               O_NONBLOCK);
+//    if (this->_create_group_fd == -1)
+//    {
+//        perror("open create_group.txt failed");
+//    }
+//
+//    this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_send_fd == -1)
+//    {
+//        perror("open send.txt failed");
+//    }
+//
+//    this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_who_fd == -1)
+//    {
+//        perror("open who.txt failed");
+//    }
+//
+//    this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_exit_fd == -1)
+//    {
+//        perror("open exit.txt failed");
+//    }
+//}
 
 
 void Server::_serverStdInput() {
     std::string command;
-    std::getline (stdin, command);
-    if (command == (EXIT)){
+    std::getline (std::cin, command);
+    if (command == (SERVER_INPUT_EXIT)){
         print_exit();
         //TODO: exit gracefully... not like a baffoon
         exit(0);

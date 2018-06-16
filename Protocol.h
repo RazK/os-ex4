@@ -93,4 +93,6 @@ typedef struct _ExitMessage{
 } ExitMessage;
 
 
+bool isValidName(const std::string& name);
+
 #endif //OSEX4_PROTOCOL_H
