@@ -23,12 +23,13 @@
 #include "whatsappio.h"
 #include "ErrorCode.h"
 
+const int maxNumConnected = 10;
 
 
 
 class Server{
 public:
-    Server(int port);
+    Server(unsigned short port);
 
     ~Server();
 
@@ -47,6 +48,8 @@ private:
 
     //methods
     ErrorCode _establish(unsigned short port);
+    ErrorCode _closeConnection();
+
 
 
 };

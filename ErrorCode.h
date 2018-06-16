@@ -11,7 +11,7 @@ typedef enum _ErrorCode{
     NOT_IMPLEMENTED = 1
 } ErrorCode;
 
-#define ASSERT(cond, msg)                   \
+#define ASSERTANDEXIT(cond, msg)            \
 do {                                        \
     if (cond) {                             \
         std::cerr <<  (msg) << std::endl;   \
@@ -19,7 +19,7 @@ do {                                        \
     }                                       \
 } while (0)
 
-#define ASSERT_RET(cond, msg, retVal)       \
+#define ASSERTANDRET(cond, msg, retVal)     \
 do {                                        \
     if (cond) {                             \
         std::cerr <<  (msg) << std::endl;   \
@@ -27,8 +27,19 @@ do {                                        \
     }                                       \
 } while (0)
 
-#define ASSERT_SUCCESS(f, msg)  ASSERT((ErrorCode::SUCCESS != (f)), msg)
-#define ASSERT_NOT_NULL(obj, msg, retVal)  ASSERT_RET((nullptr != (obj)), msg, retVal)
+#define ASSERTANDDO(cond, f)                \
+do {                                        \
+    if (cond) {                             \
+        return f();                         \
+    }                                       \
+} while (0)
+
+#define ASSERTANDEXIT_SUCCESS(f, msg)       ASSERTANDEXIT((ErrorCode::SUCCESS != (f)), msg)
+#define ASSERTANDRET_SUCCESS(f, msg)        ASSERTANDRET((ErrorCode::SUCCESS != (f)), msg, ErrorCode::FAIL)
+#define ASSERTANDDO_SUCCESS(val, f)         ASSERTANDDO((ErrorCode::SUCCESS != (val)), f)
+
+
+#define ASSERTANDRET_NOT_NULL(obj, msg)     ASSERTANDRET((nullptr != (obj)), msg, ErrorCode::FAIL)
 
 
 #endif //OSEX4_ERRORCODE_H
