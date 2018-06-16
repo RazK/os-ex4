@@ -112,15 +112,11 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
     ASSERT((0 <= groupName.length() &&
             groupName.length() <= WA_MAX_NAME), "Invalid group name length");
     ASSERT((0 <= listOfClientNames.length() &&
-            listOfClientNames.length() <= WA_MAX_MESSAGE
-                                          - sizeof(command_type)
-                                          - sizeof(name_len)
-                                          - groupName.length()
-                                          - sizeof(clients_len)),
+            listOfClientNames.length() <= WA_MAX_INPUT),
            "Invalid clients list length");
 
     // Init empty message
-    CreateGroupMessage msg; // type = CREATE_GROUP
+    CreateGroupMessage msg; // msg_type = CREATE_GROUP
 
     // Build message
     msg.nameLen = groupName.length();
@@ -143,14 +139,11 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     ASSERT((0 <= targetName.length() &&
             targetName.length() <= WA_MAX_NAME), "Invalid target name length");
     ASSERT((0 <= message.length() &&
-            message.length() <= WA_MAX_MESSAGE
-                                          - sizeof(command_type)
-                                          - targetName.length()
-                                          - sizeof(message_len)),
+            message.length() <= WA_MAX_MESSAGE),
            "Invalid message length");
 
     // Init empty message
-    SendMessage msg; // type = SEND
+    SendMessage msg; // msg_type = SEND
 
     // Build message
     msg.nameLen = targetName.length();
@@ -170,7 +163,7 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
 ErrorCode Client::_RequestWho() const
 {
     // Init empty message
-    WhoMessage msg; // type = WHO
+    WhoMessage msg; // msg_type = WHO
 
     // Send message
     ASSERT_WRITE(_who_fd, &msg.mtype, sizeof(msg.mtype));
@@ -180,7 +173,7 @@ ErrorCode Client::_RequestWho() const
 ErrorCode Client::_RequestExist() const
 {
     // Init empty message
-    ExitMessage msg; // type = Exit
+    ExitMessage msg; // msg_type = Exit
 
     // Send message
     ASSERT_WRITE(_exit_fd, &msg.mtype, sizeof(msg.mtype));

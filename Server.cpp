@@ -24,7 +24,49 @@ ErrorCode Server::_closeConnection(){
 
 ErrorCode Server::_ParseMessage(int socket)
 {
+    msg_type mtype;
+    ASSERT_READ(socket, &mtype, sizeof(msg_type));
+    switch (mtype)
+    {
+        case command_type::CREATE_GROUP:
+        {
+            std::string groupName(WA_MAX_NAME, '\0');
+            std::string clientNamesList(WA_MAX_INPUT, '\0');
+            ASSERT_SUCCESS(_ParseCreateGroup(groupName, clientNamesList), "Failed to parse "
+                    "create_group message\r\n");
 
+            ASSERT_SUCCESS(_HandleCreateGroup(groupName, clientNamesList), "Failed to handle "
+                    "create_group message\r\n");
+            break;
+        }
+        case command_type::SEND:
+        {
+            std::string targetName(WA_MAX_NAME, '\0');
+            std::string message(WA_MAX_MESSAGE, '\0');
+            ASSERT_SUCCESS(_ParseSendMessage(targetName, message), "Failed to parse "
+                    "send_message message\r\n");
+
+            ASSERT_SUCCESS(_HandleSendMessage(targetName, message), "Failed to handle "
+                    "send_message message\r\n");
+            break;
+        }
+        case command_type::WHO:
+        {
+            ASSERT_SUCCESS(_HandleWho(), "Failed to handle who_message\r\n");
+            break;
+        }
+        case command_type::EXIT:
+        {
+            ASSERT_SUCCESS(_HandleExit(), "Failed to handle exit_message\r\n");
+            break;
+        }
+        default:
+        {
+            printf("Unrecognized message type\r\n");
+            return ErrorCode::FAIL;
+        }
+    }
+    return ErrorCode::SUCCESS;
 }
 
 ErrorCode Server::_ParseCreateGroup(std::string& groupName,
@@ -33,41 +75,79 @@ ErrorCode Server::_ParseCreateGroup(std::string& groupName,
     name_len nameLen;
     clients_len clientsLen;
 
-    // Parse message
+    // Parse group-name length
     ASSERT_READ(_create_group_fd, &nameLen, sizeof(name_len));
+
+    // Assert length is legal
     ASSERT((0 <= nameLen &&
             nameLen <= WA_MAX_NAME), "Invalid group name length");
 
+    // Read group name
     ASSERT_READ(_create_group_fd, &groupName[0], nameLen);
 
+    // Parse client-names length
     ASSERT_READ(_create_group_fd, &clientsLen, sizeof(clients_len));
-    ASSERT((0 <= listOfClientNames.length() &&
-            listOfClientNames.length() <= WA_MAX_MESSAGE
-                                          - sizeof(command_type)
-                                          - sizeof(name_len)
-                                          - nameLen
-                                          - sizeof(clients_len)),
+
+    // Assert length is legal
+    ASSERT((0 <= clientsLen &&
+            clientsLen <= WA_MAX_MESSAGE),
            "Invalid clients list length");
 
+    // Read client names
     ASSERT_READ(_create_group_fd, &listOfClientNames[0], clientsLen);
 
     return ErrorCode::SUCCESS;
 }
 ErrorCode Server::_ParseSendMessage(std::string& /* OUT */ targetName,
                                     std::string& /* OUT */ message) const {
+    name_len nameLen;
+    message_len messageLen;
+
+    // Parse group-name length
+    ASSERT_READ(_send_fd, &nameLen, sizeof(name_len));
+
+    // Assert length is legal
+    ASSERT((0 <= nameLen &&
+            nameLen <= WA_MAX_NAME), "Invalid target name length");
+
+    // Read group name
+    ASSERT_READ(_send_fd, &targetName[0], nameLen);
+
+    // Parse client-names length
+    ASSERT_READ(_send_fd, &messageLen, sizeof(message_len));
+
+    // Assert length is legal
+    ASSERT((0 <= messageLen &&
+            messageLen <= WA_MAX_MESSAGE),
+           "Invalid message length");
+
+    // Read client names
+    ASSERT_READ(_send_fd, &message[0], messageLen);
+
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode Server::_HandleCreateGroup(const std::string& groupName,
+                             const std::string& listOfClientNames)
+{
     return ErrorCode::NOT_IMPLEMENTED;
 }
 
-ErrorCode Server::_ParseWho() const{
+ErrorCode Server::_HandleSendMessage(const std::string& targetName,
+                             const std::string& message)
+{
     return ErrorCode::NOT_IMPLEMENTED;
-
 }
 
-ErrorCode Server::_ParseExist() const {
+ErrorCode Server::_HandleWho()
+{
     return ErrorCode::NOT_IMPLEMENTED;
-
 }
 
+ErrorCode Server::_HandleExit()
+{
+    return ErrorCode::NOT_IMPLEMENTED;
+}
 
 ErrorCode Server::_establish(unsigned short port) {
 

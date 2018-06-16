@@ -10,21 +10,21 @@
 
 
 /** 'CREATE_GROUP' message:
- * +------+----------+------------+-------------+--------------+
- * |   1  |     1    |  name_len  |      4      |  clients_len |
- * +------+----------+------------+-------------+--------------+
- * | type | name_len | group_name | clients_len | client_names |
- * +------+----------+------------+-------------+--------------+
+ * +----------+----------+------------+-------------+--------------+
+ * |     1    |     1    |  name_len  |      4      |  clients_len |
+ * +----------+----------+------------+-------------+--------------+
+ * | msg_type | name_len | group_name | clients_len | client_names |
+ * +----------+----------+------------+-------------+--------------+
 */
 
-typedef uint8_t type;
+typedef uint8_t msg_type;
 typedef uint8_t name_len;
 typedef const char* group_name;
 typedef uint64_t clients_len;
 typedef const char* client_names;
 
 typedef struct _CreateGroupMessage{
-    type mtype = command_type::CREATE_GROUP;
+    msg_type mtype = command_type::CREATE_GROUP;
     name_len nameLen;
     group_name groupName;
     clients_len clientsLen;
@@ -41,11 +41,11 @@ typedef struct _CreateGroupMessage{
 
 
 /** 'SEND' Message:
- * +------+----------+-------------+-------------+--------------+
- * |   1  |     1    |   name_len  |      1      |  message_len |
- * +------+----------+-------------+-------------+--------------+
- * | type | name_len | target_name | message_len |    message   |
- * +------+----------+-------------+-------------+--------------+
+ * +----------+----------+-------------+-------------+--------------+
+ * |     1    |     1    |   name_len  |      1      |  message_len |
+ * +----------+----------+-------------+-------------+--------------+
+ * | msg_type | name_len | target_name | message_len |    message   |
+ * +----------+----------+-------------+-------------+--------------+
 */
 
 typedef const char* target_name;
@@ -53,7 +53,7 @@ typedef uint8_t message_len;
 typedef const char* message;
 
 typedef struct _SendMessage{
-    type mtype = command_type::SEND;
+    msg_type mtype = command_type::SEND;
     name_len nameLen;
     target_name targetName;
     message_len messageLen;
@@ -62,28 +62,28 @@ typedef struct _SendMessage{
 
 
 /** 'WHO' Message:
- * +------+
- * |   1  |
- * +------+
- * | type |
- * +------+
+ * +----------+
+ * |     1    |
+ * +----------+
+ * | msg_type |
+ * +----------+
 */
 
 typedef struct _WhoMessage{
-    type mtype = command_type::WHO;
+    msg_type mtype = command_type::WHO;
 } WhoMessage;
 
 
 /** 'EXIT' Message:
- * +------+
- * |   1  |
- * +------+
- * | type |
- * +------+
+ * +----------+
+ * |     1    |
+ * +----------+
+ * | msg_type |
+ * +----------+
 */
 
 typedef struct _ExitMessage{
-    type mtype = command_type::EXIT;
+    msg_type mtype = command_type::EXIT;
 } ExitMessage;
 
 

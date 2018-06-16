@@ -60,6 +60,8 @@ private:
     ErrorCode _Run(); // loops with select : calls _HandleIncomingMessage on modified sockets
     ErrorCode _HandleIncomingMessage(int socket); // Calls the parser on relevent socket
 
+// TODO: RazK: Resume private after testing
+public:
     ErrorCode _ParseMessage(int socket); // TODO: RazK: Remve after debug (or change
     // signature)
 
@@ -67,15 +69,13 @@ private:
                                 std::string& /* OUT */ listOfClientNames) const;
     ErrorCode _ParseSendMessage(std::string& /* OUT */ targetName,
                                 std::string& /* OUT */ message) const;
-    ErrorCode _ParseWho() const;
-    ErrorCode _ParseExist() const;
 
     ErrorCode _HandleCreateGroup(const std::string& groupName,
                                  const std::string& listOfClientNames);
     ErrorCode _HandleSendMessage(const std::string& targetName,
                                  const std::string& message);
-    ErrorCode _HandleWho() const;
-    ErrorCode _HandleExit() const;
+    ErrorCode _HandleWho();
+    ErrorCode _HandleExit();
 
     int _get_connection();
 };
