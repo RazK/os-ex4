@@ -14,9 +14,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define MAX_GROUP_LEN 50;
-#define MAX_MSG_LEN 256;
-#define MAX_NAME_LEN 30;
+#include "whatsappio.h"
+
 
 
 
