@@ -85,6 +85,9 @@ ErrorCode Server::_ParseName(int sock_fd, std::string& /* OUT */ clientName){
     int nameLen = strnlen(clientName.c_str(), WA_MAX_NAME);
     clientName.resize(nameLen);
 
+    // Assert name is legal
+    ASSERT(isValidName(clientName), "Invalid client name characters");
+
     return ErrorCode::SUCCESS;
 }
 
@@ -104,6 +107,9 @@ ErrorCode Server::_ParseCreateGroup(std::string& /* OUT */ groupName,
     // Read group name
     ASSERT_READ(_create_group_fd, &groupName[0], nameLen);
     groupName.resize(nameLen);
+
+    // Assert name is legal
+    ASSERT(isValidName(groupName), "Invalid group name characters");
 
     // Parse client-names length
     ASSERT_READ(_create_group_fd, &clientsLen, sizeof(clients_len));
@@ -136,7 +142,10 @@ ErrorCode Server::_ParseSendMessage(std::string& /* OUT */ targetName,
     ASSERT_READ(_send_fd, &targetName[0], nameLen);
     targetName.resize(nameLen);
 
-    // Parse client-names length
+    // Assert name is legal
+    ASSERT(isValidName(targetName), "Invalid target name characters");
+
+    // Parse message length
     ASSERT_READ(_send_fd, &messageLen, sizeof(message_len));
     messageLen = ntohs(messageLen);
 
@@ -145,7 +154,7 @@ ErrorCode Server::_ParseSendMessage(std::string& /* OUT */ targetName,
             messageLen <= WA_MAX_MESSAGE),
            "Invalid message length");
 
-    // Read client names
+    // Read message
     ASSERT_READ(_send_fd, &message[0], messageLen);
     message.resize(messageLen);
 

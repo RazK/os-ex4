@@ -105,6 +105,9 @@ int Client::_readData(int n) {
 }
 
 ErrorCode Client::_TellName(const std::string& myName){
+    // Assert valid name
+    ASSERT(isValidName(myName), ("Tried to tell invalid name %s", myName));
+
     // Pad name with zeros up to WA_MAX_NAME
     std::string maxName(myName);
     maxName.resize(WA_MAX_NAME, 0);
@@ -120,6 +123,9 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
                                       const std::string& listOfClientNames)
 {
     // Validate arguments
+    // Assert valid name
+    ASSERT(isValidName(groupName), ("Attempted to create group with invalid characters %s",
+            groupName));
     ASSERT((0 <= groupName.length() &&
             groupName.length() <= WA_MAX_NAME), "Invalid group name length");
     ASSERT((0 <= listOfClientNames.length() &&
@@ -147,6 +153,10 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
 ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::string& message) const
 {
     // Validate arguments
+    // Assert valid name
+    ASSERT(isValidName(targetName), ("Attempted to send message to target with invalid "
+            "characters %s",
+            targetName));
     ASSERT((0 <= targetName.length() &&
             targetName.length() <= WA_MAX_NAME), "Invalid target name length");
     ASSERT((0 <= message.length() &&
