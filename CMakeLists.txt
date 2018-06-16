@@ -4,7 +4,7 @@ project(OSEx4)
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES main.cpp )
-set(CLIENT_SOURCE_FILES Client.cpp Client.h ErrorCode.h whatsappio.cpp whatsappio.h Protocol.h)
+set(CLIENT_SOURCE_FILES Client.cpp Client.h ErrorCode.h whatsappio.cpp whatsappio.h Protocol.h Protocol.cpp)
 set(SERVER_SOURCE_FILES Server.cpp Server.h ErrorCode.h whatsappio.cpp whatsappio.h Protocol.h Protocol.cpp)
 
 #add_executable(testMain ${SOURCE_FILES} )
