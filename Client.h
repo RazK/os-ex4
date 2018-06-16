@@ -12,7 +12,6 @@
 #include <vector>
 #include <map>
 
-#include "Console.h"
 #include "ErrorCode.h"
 
 
@@ -29,16 +28,15 @@ private:
     const std::string _clientName;
     const std::string _serverAddress;
     const unsigned int _serverPort;
-//    std::
 
     //methods
-
-    ErrorCode _creatGroup(const std::string groupName, const std::string listOfClientNames);
-    ErrorCode _send(const std::string targetName, const std::string message);
+    ErrorCode _RequestCreateGroup(const std::string& groupName,
+                                  const std::vector<const std::string&>& listOfClientNames) const;
+    ErrorCode _RequestSendMessage(const std::string& targetName, const std::string& message) const;
+    ErrorCode _RequestWho() const;
+    ErrorCode _RequestExist() const;
 
     bool _uniqueName(std::string newName) const;
-
-
 
 };
 
