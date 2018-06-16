@@ -9,6 +9,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <iostream>
+
 //#include <unistd.h>
 //#include <sys/types.h>
 //#include <sys/socket.h>
@@ -38,8 +40,13 @@ private:
 //
 //    struct sockaddr_in serv_addr, cli_addr;
 
+    char myname[WA_MAX_NAME + 1];
+    int s;
+    struct sockaddr_in sa;
+    struct hostent *hp;
+
     //methods
-    ErrorCode _establish(unsigned short port)
+    ErrorCode _establish(unsigned short port);
 
 
 };

@@ -19,6 +19,16 @@ do {                                        \
     }                                       \
 } while (0)
 
+#define ASSERT_RET(cond, msg, retVal)       \
+do {                                        \
+    if (cond) {                             \
+        std::cerr <<  (msg) << std::endl;   \
+        return retVal;                      \
+    }                                       \
+} while (0)
+
 #define ASSERT_SUCCESS(f, msg)  ASSERT((ErrorCode::SUCCESS != (f)), msg)
+#define ASSERT_NOT_NULL(obj, msg, retVal)  ASSERT_RET((nullptr != (obj)), msg, retVal)
+
 
 #endif //OSEX4_ERRORCODE_H
