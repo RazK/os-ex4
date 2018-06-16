@@ -70,6 +70,11 @@ ErrorCode Server::_ParseMessage(int socket)
     return ErrorCode::SUCCESS;
 }
 
+ErrorCode _ParseName(int sock_fd, std::string& clientName){
+    ASSERT_READ(sock_fd, &clientName[0], WA_MAX_NAME);
+    return ErrorCode::SUCCESS;
+}
+
 ErrorCode Server::_ParseCreateGroup(std::string& groupName,
                                     std::string& listOfClientNames) const
 {

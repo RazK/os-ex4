@@ -67,12 +67,11 @@ public:
 public:
     ErrorCode _ParseMessage(int socket); // TODO: RazK: Remve after debug (or change
     // signature)
-
+    ErrorCode _ParseName(int socket);
     ErrorCode _ParseCreateGroup(std::string& /* OUT */ groupName,
                                 std::string& /* OUT */ listOfClientNames) const;
     ErrorCode _ParseSendMessage(std::string& /* OUT */ targetName,
                                 std::string& /* OUT */ message) const;
-
     ErrorCode _HandleCreateGroup(const std::string& groupName,
                                  const std::string& listOfClientNames);
     ErrorCode _HandleSendMessage(const std::string& targetName,

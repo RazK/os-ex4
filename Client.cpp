@@ -105,6 +105,7 @@ int Client::_readData(int n) {
     return(bcount);
 }
 
+
 ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
                                       const std::string& listOfClientNames)
 {
