@@ -10,9 +10,11 @@
 #include <cstdlib>
 #include <string>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+//#include <sys/types.h>
+//#include <sys/socket.h>
+//#include <netinet/in.h>
+#include <unistd.h>   // gethostname, gethostbyname
+
 
 #include "whatsappio.h"
 

@@ -4,11 +4,10 @@ project(OSEx4)
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES main.cpp )
-set(CLIENT_SOURCE_FILES Client.cpp Client.h ErrorCode.h)
-set(SERVER_SOURCE_FILES Server.cpp Server.h ErrorCode.h)
+set(CLIENT_SOURCE_FILES Client.cpp Client.h ErrorCode.h whatsappio.cpp whatsappio.h)
+set(SERVER_SOURCE_FILES Server.cpp Server.h ErrorCode.h whatsappio.cpp whatsappio.h)
 
 add_executable(testMain ${SOURCE_FILES} )
-
 
 add_executable(OSEx4 ${SOURCE_FILES} ${CLIENT_SOURCE_FILES} ${SERVER_SOURCE_FILES} )
 
