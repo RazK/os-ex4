@@ -27,40 +27,43 @@ ErrorCode Server::_ParseMessage(int socket)
 
 }
 
-ErrorCode Server::_ParseCreateGroup(CreateGroupMessage& /* OUT */ foo) const
+ErrorCode Server::_ParseCreateGroup(std::string& groupName,
+                                    std::string& listOfClientNames) const
 {
-    std::string listOfClientNames;
     name_len nameLen;
-    group_name groupName;
     clients_len clientsLen;
-    client_names clientNames;
 
     // Parse message
     ASSERT_READ(_create_group_fd, &nameLen, sizeof(name_len));
     ASSERT((0 <= nameLen &&
             nameLen <= WA_MAX_NAME), "Invalid group name length");
 
-    groupName = new char[nameLen];
-    ASSERT_READ(_create_group_fd, (void*)groupName, nameLen);
+    ASSERT_READ(_create_group_fd, &groupName[0], nameLen);
 
     ASSERT_READ(_create_group_fd, &clientsLen, sizeof(clients_len));
+    ASSERT((0 <= listOfClientNames.length() &&
+            listOfClientNames.length() <= WA_MAX_MESSAGE
+                                          - sizeof(command_type)
+                                          - sizeof(name_len)
+                                          - nameLen
+                                          - sizeof(clients_len)),
+           "Invalid clients list length");
 
-    clientNames = new char[clientsLen];
-    ASSERT_READ(_create_group_fd, &clientNames, clientsLen);
+    ASSERT_READ(_create_group_fd, &listOfClientNames[0], clientsLen);
 
-    //CreateGroupMessage
     return ErrorCode::SUCCESS;
 }
-ErrorCode Server::_ParseWho(WhoMessage /* OUT */ msg) const{
+ErrorCode Server::_ParseSendMessage(std::string& /* OUT */ targetName,
+                                    std::string& /* OUT */ message) const {
+    return ErrorCode::NOT_IMPLEMENTED;
+}
+
+ErrorCode Server::_ParseWho() const{
     return ErrorCode::NOT_IMPLEMENTED;
 
 }
 
-ErrorCode Server::_ParseSendMessage(SendMessage & /* OUT */ msg) const {
-    return ErrorCode::NOT_IMPLEMENTED;
-}
-
-ErrorCode Server::_ParseExist(ExitMessage /* OUT */ msg) const {
+ErrorCode Server::_ParseExist() const {
     return ErrorCode::NOT_IMPLEMENTED;
 
 }

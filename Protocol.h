@@ -29,6 +29,14 @@ typedef struct _CreateGroupMessage{
     group_name groupName;
     clients_len clientsLen;
     client_names clientNames;
+
+    _CreateGroupMessage(){}
+
+    _CreateGroupMessage(name_len nameLen,
+    group_name groupName,
+    clients_len clientsLen,
+    client_names clientNames) : mtype(CREATE_GROUP), nameLen(nameLen), groupName(groupName),
+                                clientsLen(clientsLen), clientNames(clientNames){}
 } CreateGroupMessage;
 
 
