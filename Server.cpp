@@ -10,16 +10,23 @@
 #include "Protocol.h"
 
 Server::Server(unsigned short port) {
+    numOfActiveSockets = 1; // 1 socket always listening for new clients
+
+    FD_ZERO(this->writeSocketSet); // Init the set of sockets
+    FD_ZERO(this->clientSocketSet); // Init the set of sockets
+    FD_ZERO(this->excptSocketSet); // Init the set of sockets
+
+
     if (ErrorCode::SUCCESS != this->_establish(port)){
         print_fail_connection();
+        exit(-1);
     }
-    this->_get_connection();
     print_connection();
-//    print_connection_server();
+//    this->_get_connection();
 }
 
 ErrorCode Server::_closeConnection(){
-    close(this->s);
+    close(this->serverSocketClient);
     return ErrorCode::FAIL;
 }
 
@@ -198,14 +205,18 @@ ErrorCode Server::_establish(unsigned short port) {
     this->sa.sin_port = htons(port);
 
     /* create socket */
-    this->s = socket(AF_INET, SOCK_STREAM, 0);
-    if(this->s < 0){
+    this->serverSocketClient = socket(AF_INET, SOCK_STREAM, 0);
+    if(this->serverSocketClient < 0){
         printf("err whilst creating socket in server establish connection");
         return ErrorCode::FAIL;
 
     }
 
-    if (bind(this->s , (struct sockaddr *)&(this->sa) , sizeof(struct sockaddr_in)) < 0){
+    // add that socket to the set for select
+    FD_SET(this->serverSocketClient, this->clientSocketSet);
+    FD_SET(STDIN_FILENO, this->clientSocketSet);
+
+    if (bind(this->serverSocketClient , (struct sockaddr *)&(this->sa) , sizeof(struct sockaddr_in)) < 0){
         printf("Err in bind");
         return ErrorCode::FAIL;
 
@@ -213,7 +224,7 @@ ErrorCode Server::_establish(unsigned short port) {
 
 
     /* max # of queued connects */
-    if (listen(this->s, maxNumConnected) < 0){
+    if (listen(this->serverSocketClient, maxNumConnected) < 0){
         printf("failed to listen in server establish connection");
         return ErrorCode::FAIL;
     }
@@ -222,14 +233,57 @@ ErrorCode Server::_establish(unsigned short port) {
 }
 
 int Server::_get_connection() {
-//    int t= accept(this->s,NULL, NULL); /* socket of connection */
+//    int t= accept(this->serverSocketClient,NULL, NULL); /* socket of connection */
     clilen = sizeof(cli_addr);
-    int t = accept(this->s, (struct sockaddr *) &cli_addr, &clilen);
+    int t = accept(this->serverSocketClient, (struct sockaddr *) &cli_addr, &clilen);
 
     if (t < 0){
         return -1;
     }
     return t;
+}
+
+
+ErrorCode Server::_Run() {
+//    struct timeval interval{0, 100};
+    bool stillRunning = true;
+    while (stillRunning){
+        auto readfds = this->clientSocketSet; //TODO: need to make a copy here..
+        if (select(this->numOfActiveSockets+1, readfds, NULL, NULL, NULL) < 0) {
+            print_error("_Run - select", 1);
+            exit(-1);
+        }
+        if (FD_ISSET(this->serverSocketClient, readfds)) {
+            //will also add the client to the clientsfds
+
+            this->_connectNewClient();
+        }
+        if (FD_ISSET(STDIN_FILENO, readfds)) {
+            this->_serverStdInput();
+        }
+        else {
+            //will check each client if it’s serverSocketClient in readfds
+            //and then receive a message from him
+            for (auto i = this->connectedClients.begin(); i != this->connectedClients.end(); ++i ){
+                if (FD_ISSET(i->sock, readfds)){
+                    this->_HandleIncomingMessage(i->sock);
+                    break;
+                }
+            }
+        }
+    }
+
+
+    auto s = select(this->numOfActiveSockets, this->clientSocketSet, this->writeSocketSet, this->excptSocketSet, NULL);
+
+    if (ErrorCode::FAIL == s){
+
+    }
+    if (s == this->serverSocketClient){ //
+
+    }
+
+    return FAIL;
 }
 
 Server::Server() {
@@ -287,12 +341,54 @@ Server::Server() {
 }
 
 
-//
+void Server::_serverStdInput() {
+    std::string command;
+    std::getline (stdin, command);
+    if (command == (EXIT)){
+        print_exit();
+        //TODO: exit gracefully... not like a baffoon
+        exit(0);
+    }
+
+}
+
+void Server::_connectNewClient() {
+    auto t = _get_connection();
+    if (t < 0){
+        print_error("_Run - connectNewClient", 2);
+        exit(-1);
+    }
+
+
+    //TODO: get the name before this step
+    connectedClients.emplace_back(clientWrapper{t, "noname"});
+    this->numOfActiveSockets ++; //increment the number of clients
+    FD_SET(t, this->clientSocketSet);
+
+}
+
+ErrorCode Server::_HandleIncomingMessage(int socket) {
+    _ParseMessage(socket);
+    return FAIL;
+}
+
+
+
 //int main(int argc, char const *argv[]){
-//    printf("Opening Server\n");
+//    // assert legal usage of a single parameter after prog name
+//    if (argc != 2){
+//        print_server_usage();
+//        exit(-1);
+//    }
 //
-//    Server server{};
-//    printf("Closing Server\n");
+//    // read port number and assert legal - ports positive and are bounded by ushort max
+//    size_t * idx;
+//    auto port = std::stoi(argv[1], idx, 10 /* base 10 */);
 //
+//    if (port < 0 or port > USHRT_MAX){
+//        print_server_usage();
+//        exit(-1);
+//    }
+//    Server server{(unsigned short)port};
 //
 //}

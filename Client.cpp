@@ -12,17 +12,16 @@
 #include <netinet/in.h>
 
 Client::Client() {
-//
-//    char * addr{"aqua-81"};
-//    int port = 8080;
-//    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
-//        printf("Err in socket calling\n");
-//        return ;
-//    }
-//    write(this->s, "finally, a message", 100);
-//    this->_readData(1024);
-//
-//    printf("Client read: %s", this->buf);
+    char * addr{"aqua-81"};
+    int port = 8080;
+    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
+        printf("Err in socket calling\n");
+        return ;
+    }
+    write(this->s, "finally, a message", 100);
+    this->_readData(1024);
+
+    printf("Client read: %serverSocketClient", this->buf);
 
     // TODO: REMOVE THESE LINES
     this->_sock_fd = open("/cs/+/usr/razkarl/os-ex4/client_test.txt", O_CREAT | O_RDWR | O_NONBLOCK);
@@ -59,7 +58,7 @@ Client::~Client() {}
 
 
 ErrorCode Client::_callSocket(char *hostname, unsigned short port) {
-    printf("HOST %s\n", hostname);
+    printf("HOST %s \n", hostname);
     this->hp= gethostbyname (hostname);
     if (this->hp == nullptr) {
         printf("failed to get host by name");
