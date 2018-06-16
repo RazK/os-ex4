@@ -11,6 +11,6 @@ set(SERVER_SOURCE_FILES Server.cpp Server.h ErrorCode.h whatsappio.cpp whatsappi
 
 add_executable(OSEx4 ${SOURCE_FILES} ${CLIENT_SOURCE_FILES} ${SERVER_SOURCE_FILES} )
 
-add_executable(whatsappClient ${CLIENT_SOURCE_FILES} )
+#add_executable(whatsappClient ${CLIENT_SOURCE_FILES} )
 
-add_executable(whatsappServer ${SERVER_SOURCE_FILES})
+#add_executable(whatsappServer ${SERVER_SOURCE_FILES})
