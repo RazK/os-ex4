@@ -77,7 +77,7 @@ public:
 
 // TODO: RazK: Resume private after testing
 public:
-    ErrorCode _ParseMessage(int socket); // TODO: RazK: Remve after debug (or change
+    ErrorCode _ParseMessage(const clientWrapper & client); // TODO: RazK: Remve after debug (or change
     // signature)
     ErrorCode _ParseName(int socket, std::string& /* OUT */ clientName);
     ErrorCode _ParseCreateGroup(std::string& /* OUT */ groupName,
@@ -88,7 +88,7 @@ public:
                                  const std::string& listOfClientNames);
     ErrorCode _HandleSendMessage(const std::string& targetName,
                                  const std::string& message);
-    ErrorCode _HandleWho();
+    ErrorCode _HandleWho(const clientWrapper& client);
     ErrorCode _HandleExit();
 
     int _get_connection();

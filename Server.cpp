@@ -30,8 +30,9 @@ ErrorCode Server::_closeConnection(){
     return ErrorCode::FAIL;
 }
 
-ErrorCode Server::_ParseMessage(int socket)
+ErrorCode Server::_ParseMessage(const clientWrapper& client)
 {
+    auto socket = client.sock;
     msg_type mtype;
     ASSERT_READ(socket, &mtype, sizeof(msg_type));
     switch (mtype)
@@ -60,7 +61,7 @@ ErrorCode Server::_ParseMessage(int socket)
         }
         case command_type::WHO:
         {
-            ASSERT_SUCCESS(_HandleWho(), "Failed to handle who_message\r\n");
+            ASSERT_SUCCESS(_HandleWho(client), "Failed to handle who_message\r\n");
             break;
         }
         case command_type::EXIT:
@@ -168,12 +169,18 @@ ErrorCode Server::_HandleSendMessage(const std::string& targetName,
     return ErrorCode::NOT_IMPLEMENTED;
 }
 
-ErrorCode Server::_HandleWho()
+ErrorCode Server::_HandleWho(const clientWrapper & client)
 {
-    
-    for (auto i = this->connectedClients.begin(); i != this->connectedClients.end(); ++i){
+    print_who_server(client.name);
 
+    std::string allNames;
+    for (auto &connectedClient : this->connectedClients) {
+        allNames += connectedClient.name + ",";
     }
+    allNames = allNames.substr(allNames.length() -1);
+
+    ASSERT_WRITE(client.sock, allNames.c_str(), allNames.length());
+
     return ErrorCode::SUCCESS;
 }
 
