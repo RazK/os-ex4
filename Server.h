@@ -10,13 +10,15 @@
 #include <cstdlib>
 #include <string>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+//#include <sys/types.h>
+//#include <sys/socket.h>
+//#include <netinet/in.h>
+#include <unistd.h>   // gethostname, gethostbyname
 
-#define MAX_GROUP_LEN 50;
-#define MAX_MSG_LEN 256;
-#define MAX_NAME_LEN 30;
+
+#include "whatsappio.h"
+
+
 
 
 class Server{
