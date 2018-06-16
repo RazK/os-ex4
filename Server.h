@@ -29,9 +29,11 @@ const int maxNumConnected = 10;
 
 class Server{
 public:
+    Server();
+
     Server(unsigned short port);
 
-    ~Server();
+    ~Server() = default;
 
 private:
     // fields
@@ -44,14 +46,14 @@ private:
     char myname[WA_MAX_NAME + 1];
     int s;
     struct sockaddr_in sa;
+    struct sockaddr_in cli_addr;
     struct hostent *hp;
+    socklen_t clilen;
 
     //methods
     ErrorCode _establish(unsigned short port);
     ErrorCode _closeConnection();
-
-
-
+    int _get_connection();
 };
 
 #endif //OSEX4_SERVER_H
