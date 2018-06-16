@@ -12,16 +12,17 @@
 #include <netinet/in.h>
 
 Client::Client() {
-    char * addr{"aqua-81"};
-    int port = 8080;
-    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
-        printf("Err in socket calling\n");
-        return ;
-    }
-    write(this->s, "finally, a message", 100);
-    this->_readData(1024);
-
-    printf("Client read: %s", this->buf);
+//
+//    char * addr{"aqua-81"};
+//    int port = 8080;
+//    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
+//        printf("Err in socket calling\n");
+//        return ;
+//    }
+//    write(this->s, "finally, a message", 100);
+//    this->_readData(1024);
+//
+//    printf("Client read: %s", this->buf);
 
     // TODO: REMOVE THESE LINES
     this->_sock_fd = open("/cs/+/usr/razkarl/os-ex4/client_test.txt", O_CREAT | O_RDWR | O_NONBLOCK);
@@ -29,28 +30,27 @@ Client::Client() {
     {
         perror("open failed");
     }
-
     this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
-                                                                              O_NONBLOCK);
-    if (this->_sock_fd == -1)
+                                                                               O_NONBLOCK);
+    if (this->_create_group_fd == -1)
     {
         perror("open create_group.txt failed");
     }
 
     this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_sock_fd == -1)
+    if (this->_send_fd == -1)
     {
         perror("open send.txt failed");
     }
 
     this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_sock_fd == -1)
+    if (this->_who_fd == -1)
     {
         perror("open who.txt failed");
     }
 
     this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_sock_fd == -1)
+    if (this->_exit_fd == -1)
     {
         perror("open exit.txt failed");
     }
@@ -121,7 +121,7 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
     // Build message
     msg.nameLen = groupName.length();
     msg.groupName = groupName.c_str();
-    msg.clientsLen = listOfClientNames.length(); //htonl(listOfClientNames.length());
+    msg.clientsLen = htonl(listOfClientNames.length()); //htonl(listOfClientNames.length());
     msg.clientNames = listOfClientNames.c_str();
 
     // Send message
@@ -148,7 +148,7 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     // Build message
     msg.nameLen = targetName.length();
     msg.targetName = targetName.c_str();
-    msg.messageLen = htonl(message.length());
+    msg.messageLen = htons(message.length());
     msg.msg = message.c_str();
 
     // Send message

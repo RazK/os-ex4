@@ -15,14 +15,13 @@ int main() {
 
     Client testClient;
     testClient._RequestCreateGroup("abcdef", "cyber,raz,shimmy");
-    testClient._RequestSendMessage("target", "hey target i'm raz");
+    testClient._RequestSendMessage("raz", "hey malord I'm your slave");
     testClient._RequestWho();
     testClient._RequestExist();
 
     Server testServer;
-    std::string groupName(WA_MAX_NAME, '\0');
-    std::string clientNamesList(WA_MAX_MESSAGE, '\0');
-    testServer._ParseCreateGroup(groupName, clientNamesList);
+    testServer._ParseMessage(testServer._send_fd);
+
 //    char* foo = "1234\00056789";
 //    std::string bar = "123\000123";
 //    std::cout<< foo << std::endl;

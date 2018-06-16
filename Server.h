@@ -51,6 +51,9 @@ private:
     ErrorCode _closeConnection();
 
     //struct sockaddr_in serv_addr, cli_addr;
+
+// TODO: RazK: Resume private after testing
+public:
     int _create_group_fd;
     int _send_fd;
     int _who_fd;

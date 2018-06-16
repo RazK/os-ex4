@@ -42,14 +42,14 @@ typedef struct _CreateGroupMessage{
 
 /** 'SEND' Message:
  * +----------+----------+-------------+-------------+--------------+
- * |     1    |     1    |   name_len  |      1      |  message_len |
+ * |     1    |     1    |   name_len  |      2      |  message_len |
  * +----------+----------+-------------+-------------+--------------+
  * | msg_type | name_len | target_name | message_len |    message   |
  * +----------+----------+-------------+-------------+--------------+
 */
 
 typedef const char* target_name;
-typedef uint8_t message_len;
+typedef uint16_t message_len;
 typedef const char* message;
 
 typedef struct _SendMessage{
