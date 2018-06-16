@@ -5,188 +5,21 @@
 // Created by heimy4prez on 6/16/18.
 //
 
-#include <fcntl.h>
+//#include <fcntl.h>
+#include <unistd.h>
+
 #include "Server.h"
 #include "Protocol.h"
 
 Server::Server(unsigned short port) {
-    numOfActiveSockets = 1; // 1 socket always listening for new clients
+    numOfActiveSockets = 10; // 1 socket always listening for new clients // TODO: Determine actual number
 
-    FD_ZERO(this->writeSocketSet); // Init the set of sockets
-    FD_ZERO(this->clientSocketSet); // Init the set of sockets
-    FD_ZERO(this->excptSocketSet); // Init the set of sockets
-
+    FD_ZERO(&this->clientSocketSet); // Init the set of sockets
 
     if (ErrorCode::SUCCESS != this->_establish(port)){
         print_fail_connection();
         exit(-1);
     }
-    print_connection();
-//    this->_get_connection();
-}
-
-ErrorCode Server::_closeConnection(){
-    close(this->serverSocketClient);
-    return ErrorCode::FAIL;
-}
-
-ErrorCode Server::_ParseMessage(const clientWrapper& client)
-{
-    auto socket = client.sock;
-    msg_type mtype;
-    ASSERT_READ(socket, &mtype, sizeof(msg_type));
-    switch (mtype)
-    {
-        case command_type::CREATE_GROUP:
-        {
-            std::string groupName(WA_MAX_NAME, 0);
-            std::string clientNamesList(WA_MAX_INPUT, 0);
-            ASSERT_SUCCESS(_ParseCreateGroup(groupName, clientNamesList), "Failed to parse "
-                    "create_group message\r\n");
-
-            ASSERT_SUCCESS(_HandleCreateGroup(groupName, clientNamesList), "Failed to handle "
-                    "create_group message\r\n");
-            break;
-        }
-        case command_type::SEND:
-        {
-            std::string targetName(WA_MAX_NAME, 0);
-            std::string message(WA_MAX_MESSAGE, 0);
-            ASSERT_SUCCESS(_ParseSendMessage(targetName, message), "Failed to parse "
-                    "send_message message\r\n");
-
-            ASSERT_SUCCESS(_HandleSendMessage(targetName, message), "Failed to handle "
-                    "send_message message\r\n");
-            break;
-        }
-        case command_type::WHO:
-        {
-            ASSERT_SUCCESS(_HandleWho(client), "Failed to handle who_message\r\n");
-            break;
-        }
-        case command_type::EXIT:
-        {
-            ASSERT_SUCCESS(_HandleExit(), "Failed to handle exit_message\r\n");
-            break;
-        }
-        default:
-        {
-            printf("Unrecognized message type\r\n");
-            return ErrorCode::FAIL;
-        }
-    }
-    return ErrorCode::SUCCESS;
-}
-
-ErrorCode Server::_ParseName(int sock_fd, std::string& /* OUT */ clientName){
-    // Read Name
-    ASSERT_READ(sock_fd, &clientName[0], WA_MAX_NAME);
-
-    // Resize up to '\0'
-    int nameLen = strnlen(clientName.c_str(), WA_MAX_NAME);
-    clientName.resize(nameLen);
-
-    return ErrorCode::SUCCESS;
-}
-
-ErrorCode Server::_ParseCreateGroup(std::string& /* OUT */ groupName,
-                                    std::string& /* OUT */ listOfClientNames) const
-{
-    name_len nameLen;
-    clients_len clientsLen;
-
-    // Parse group-name length
-    ASSERT_READ(_create_group_fd, &nameLen, sizeof(name_len));
-
-    // Assert length is legal
-    ASSERT((0 <= nameLen &&
-            nameLen <= WA_MAX_NAME), "Invalid group name length");
-
-    // Read group name
-    ASSERT_READ(_create_group_fd, &groupName[0], nameLen);
-    groupName.resize(nameLen);
-
-    // Parse client-names length
-    ASSERT_READ(_create_group_fd, &clientsLen, sizeof(clients_len));
-    clientsLen = ntohl(clientsLen);
-
-    // Assert length is legal
-    ASSERT((0 <= clientsLen &&
-            clientsLen <= WA_MAX_MESSAGE),
-           "Invalid clients list length");
-
-    // Read client names
-    ASSERT_READ(_create_group_fd, &listOfClientNames[0], clientsLen);
-    listOfClientNames.resize(clientsLen);
-
-    return ErrorCode::SUCCESS;
-}
-ErrorCode Server::_ParseSendMessage(std::string& /* OUT */ targetName,
-                                    std::string& /* OUT */ message) const {
-    name_len nameLen;
-    message_len messageLen;
-
-    // Parse group-name length
-    ASSERT_READ(_send_fd, &nameLen, sizeof(name_len));
-
-    // Assert length is legal
-    ASSERT((0 <= nameLen &&
-            nameLen <= WA_MAX_NAME), "Invalid target name length");
-
-    // Read group name
-    ASSERT_READ(_send_fd, &targetName[0], nameLen);
-    targetName.resize(nameLen);
-
-    // Parse client-names length
-    ASSERT_READ(_send_fd, &messageLen, sizeof(message_len));
-    messageLen = ntohs(messageLen);
-
-    // Assert length is legal
-    ASSERT((0 <= messageLen &&
-            messageLen <= WA_MAX_MESSAGE),
-           "Invalid message length");
-
-    // Read client names
-    ASSERT_READ(_send_fd, &message[0], messageLen);
-    message.resize(messageLen);
-
-    return ErrorCode::SUCCESS;
-}
-
-ErrorCode Server::_HandleCreateGroup(const std::string& groupName,
-                             const std::string& listOfClientNames)
-{
-    std::cout << "Server::_HandleCreateGroup\ngroupName : '"<< groupName << "'\nclientsList : '" <<
-                                                                                          listOfClientNames << "'\n\r" << std::endl;
-    return ErrorCode::NOT_IMPLEMENTED;
-}
-
-ErrorCode Server::_HandleSendMessage(const std::string& targetName,
-                             const std::string& message)
-{
-    std::cout << "Server::_HandleSendMessage\ntarget : '" << targetName << "'\nmessage : '" <<
-              message << "'\n\r" << std::endl;
-    return ErrorCode::NOT_IMPLEMENTED;
-}
-
-ErrorCode Server::_HandleWho(const clientWrapper & client)
-{
-    print_who_server(client.name);
-
-    std::string allNames;
-    for (auto &connectedClient : this->connectedClients) {
-        allNames += connectedClient.name + ",";
-    }
-    allNames = allNames.substr(allNames.length() -1);
-
-    ASSERT_WRITE(client.sock, allNames.c_str(), allNames.length());
-
-    return ErrorCode::SUCCESS;
-}
-
-ErrorCode Server::_HandleExit()
-{
-    return ErrorCode::NOT_IMPLEMENTED;
 }
 
 ErrorCode Server::_establish(unsigned short port) {
@@ -224,8 +57,8 @@ ErrorCode Server::_establish(unsigned short port) {
     }
 
     // add that socket to the set for select
-    FD_SET(this->serverSocketClient, this->clientSocketSet);
-    FD_SET(STDIN_FILENO, this->clientSocketSet);
+    FD_SET(this->serverSocketClient, &this->clientSocketSet);
+    FD_SET(STDIN_FILENO, &this->clientSocketSet);
 
     if (bind(this->serverSocketClient , (struct sockaddr *)&(this->sa) , sizeof(struct sockaddr_in)) < 0){
         printf("Err in bind");
@@ -241,6 +74,178 @@ ErrorCode Server::_establish(unsigned short port) {
     }
 
     return ErrorCode::SUCCESS;
+}
+
+ErrorCode Server::_closeConnection(){
+    close(this->serverSocketClient);
+    return ErrorCode::FAIL;
+}
+
+ErrorCode Server::_ParseMessage(const clientWrapper& client)
+{
+    auto socket = client.sock;
+    msg_type mtype;
+    ASSERT_READ(socket, &mtype, sizeof(msg_type));
+    switch (mtype)
+    {
+        case command_type::CREATE_GROUP:
+        {
+            std::string groupName(WA_MAX_NAME, 0);
+            std::string clientNamesList(WA_MAX_INPUT, 0);
+            ASSERT_SUCCESS(_ParseCreateGroup(client, groupName, clientNamesList), "Failed to parse "
+                    "create_group message\r\n");
+
+            ASSERT_SUCCESS(_HandleCreateGroup(client, groupName, clientNamesList), "Failed to handle "
+                    "create_group message\r\n");
+            break;
+        }
+        case command_type::SEND:
+        {
+            std::string targetName(WA_MAX_NAME, 0);
+            std::string message(WA_MAX_MESSAGE, 0);
+            ASSERT_SUCCESS(_ParseSendMessage(client, targetName, message), "Failed to parse "
+                    "send_message message\r\n");
+
+            ASSERT_SUCCESS(_HandleSendMessage(client, targetName, message), "Failed to handle "
+                    "send_message message\r\n");
+            break;
+        }
+        case command_type::WHO:
+        {
+            ASSERT_SUCCESS(_HandleWho(client), "Failed to handle who_message\r\n");
+            break;
+        }
+        case command_type::EXIT:
+        {
+            ASSERT_SUCCESS(_HandleExit(client), "Failed to handle exit_message\r\n");
+            break;
+        }
+        default:
+        {
+            printf("Unrecognized message type\r\n");
+            return ErrorCode::FAIL;
+        }
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName){
+
+    char temp[WA_MAX_NAME];
+    bzero(temp, WA_MAX_NAME);
+
+    // Read Name
+    ASSERT_READ(client_sock, &temp, WA_MAX_NAME);
+
+    // Resize up to '\0'
+    int nameLen = strnlen(temp, WA_MAX_NAME);
+    clientName = temp;
+    clientName.resize(nameLen);
+
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode Server::_ParseCreateGroup(const clientWrapper& client, std::string& /* OUT */ groupName,
+                                    std::string& /* OUT */ listOfClientNames) const
+{
+    name_len nameLen;
+    clients_len clientsLen;
+
+    // Parse group-name length
+    ASSERT_READ(client.sock, &nameLen, sizeof(name_len));
+
+    // Assert length is legal
+    ASSERT((0 <= nameLen &&
+            nameLen <= WA_MAX_NAME), "Invalid group name length");
+
+    // Read group name
+    ASSERT_READ(client.sock, &groupName[0], nameLen);
+    groupName.resize(nameLen);
+
+    // Parse client-names length
+    ASSERT_READ(client.sock, &clientsLen, sizeof(clients_len));
+    clientsLen = ntohl(clientsLen);
+
+    // Assert length is legal
+    ASSERT((0 <= clientsLen &&
+            clientsLen <= WA_MAX_MESSAGE),
+           "Invalid clients list length");
+
+    // Read client names
+    ASSERT_READ(client.sock, &listOfClientNames[0], clientsLen);
+    listOfClientNames.resize(clientsLen);
+
+    return ErrorCode::SUCCESS;
+}
+ErrorCode Server::_ParseSendMessage(const clientWrapper& client,
+                                    std::string& /* OUT */ targetName,
+                                    std::string& /* OUT */ message) const {
+    name_len nameLen;
+    message_len messageLen;
+
+    // Parse group-name length
+    ASSERT_READ(client.sock, &nameLen, sizeof(name_len));
+
+    // Assert length is legal
+    ASSERT((0 <= nameLen &&
+            nameLen <= WA_MAX_NAME), "Invalid target name length");
+
+    // Read group name
+    ASSERT_READ(client.sock, &targetName[0], nameLen);
+    targetName.resize(nameLen);
+
+    // Parse client-names length
+    ASSERT_READ(client.sock, &messageLen, sizeof(message_len));
+    messageLen = ntohs(messageLen);
+
+    // Assert length is legal
+    ASSERT((0 <= messageLen &&
+            messageLen <= WA_MAX_MESSAGE),
+           "Invalid message length");
+
+    // Read client names
+    ASSERT_READ(client.sock, &message[0], messageLen);
+    message.resize(messageLen);
+
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
+                                     const std::string& groupName,
+                                     const std::string& listOfClientNames)
+{
+    std::cout << "Server::_HandleCreateGroup\ngroupName : '"<< groupName << "'\nclientsList : '" <<
+                                                                                          listOfClientNames << "'\n\r" << std::endl;
+    return ErrorCode::NOT_IMPLEMENTED;
+}
+
+ErrorCode Server::_HandleSendMessage(const clientWrapper& client,
+                                     const std::string& targetName,
+                                     const std::string& message)
+{
+    std::cout << "Server::_HandleSendMessage\ntarget : '" << targetName << "'\nmessage : '" <<
+              message << "'\n\r" << std::endl;
+    return ErrorCode::NOT_IMPLEMENTED;
+}
+
+ErrorCode Server::_HandleWho(const clientWrapper & client)
+{
+    print_who_server(client.name);
+
+    std::string allNames;
+    for (auto &connectedClient : this->connectedClients) {
+        allNames += connectedClient.name + ",";
+    }
+    allNames = allNames.substr(allNames.length() -1);
+
+    ASSERT_WRITE(client.sock, allNames.c_str(), allNames.length());
+
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode Server::_HandleExit(const clientWrapper& client)
+{
+    return ErrorCode::NOT_IMPLEMENTED;
 }
 
 int Server::_get_connection() {
@@ -260,97 +265,33 @@ ErrorCode Server::_Run() {
     bool stillRunning = true;
     while (stillRunning){
         auto readfds = this->clientSocketSet; //TODO: need to make a copy here..
-        if (select(this->numOfActiveSockets+1, readfds, NULL, NULL, NULL) < 0) {
+        if (select(this->numOfActiveSockets+1, &readfds, NULL, NULL, NULL) < 0) {
             print_error("_Run - select", 1);
             exit(-1);
         }
-        if (FD_ISSET(this->serverSocketClient, readfds)) {
+        if (FD_ISSET(this->serverSocketClient, &readfds)) {
             //will also add the client to the clientsfds
 
             this->_connectNewClient();
         }
-        if (FD_ISSET(STDIN_FILENO, readfds)) {
+        if (FD_ISSET(STDIN_FILENO, &readfds)) {
             this->_serverStdInput();
         }
         else {
             //will check each client if it’s serverSocketClient in readfds
             //and then receive a message from him
-            for (auto i = this->connectedClients.begin(); i != this->connectedClients.end(); ++i ){
-                if (FD_ISSET(i->sock, readfds)){
-                    this->_HandleIncomingMessage(i->sock);
+            for (auto clientIt = this->connectedClients.begin(); clientIt != this->connectedClients.end(); ++clientIt ){
+                if (FD_ISSET(clientIt->sock, &readfds)){
+//                    this->_HandleIncomingMessage(clientIt->sock);
+                    this->_ParseMessage(*clientIt);
                     break;
                 }
             }
         }
     }
 
-
-    auto s = select(this->numOfActiveSockets, this->clientSocketSet, this->writeSocketSet, this->excptSocketSet, NULL);
-
-    if (ErrorCode::FAIL == s){
-
-    }
-    if (s == this->serverSocketClient){ //
-
-    }
-
     return FAIL;
 }
-
-//Server::Server() {
-//    if (ErrorCode::SUCCESS != this->_establish(8080)){
-//        printf("failed to establish connection");
-//    }
-//
-//    char buffer[256];
-//
-//    int newsockfd = this->_get_connection();
-//
-//    if (newsockfd >= 0){
-//        send(newsockfd, "Hello, world!\n", 13, 0);
-//
-//        bzero(buffer,256);
-//
-//        int n = read(newsockfd,buffer,255);
-//        if (n < 0) {
-//            printf("ERROR reading from socket");
-//        }
-//        printf("Here is the message: %s\n",buffer);
-//
-//        close(newsockfd);
-//        close(this->s);
-//    } else {
-//        printf("Negative communication socket\n");
-//        return ;
-//    }
-
-//    // TODO: REMOVE THESE LINES
-//    this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
-//                                                                               O_NONBLOCK);
-//    if (this->_create_group_fd == -1)
-//    {
-//        perror("open create_group.txt failed");
-//    }
-//
-//    this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-//    if (this->_send_fd == -1)
-//    {
-//        perror("open send.txt failed");
-//    }
-//
-//    this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-//    if (this->_who_fd == -1)
-//    {
-//        perror("open who.txt failed");
-//    }
-//
-//    this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-//    if (this->_exit_fd == -1)
-//    {
-//        perror("open exit.txt failed");
-//    }
-//}
-
 
 void Server::_serverStdInput() {
     std::string command;
@@ -369,37 +310,39 @@ void Server::_connectNewClient() {
         print_error("_Run - connectNewClient", 2);
         exit(-1);
     }
+    std::string name;
+    ASSERT_SUCCESS(_ParseName(t, name), "Parse name failed in run");
 
+    printf("New Client: %s", name);
 
-    //TODO: get the name before this step
-    connectedClients.emplace_back(clientWrapper{t, "noname"});
+    connectedClients.emplace_back(clientWrapper{t, name});
     this->numOfActiveSockets ++; //increment the number of clients
-    FD_SET(t, this->clientSocketSet);
+    FD_SET(t, &this->clientSocketSet);
 
 }
 
 ErrorCode Server::_HandleIncomingMessage(int socket) {
-    _ParseMessage(socket);
+//    _ParseMessage(socket);
     return FAIL;
 }
 
 
+int main(int argc, char const *argv[]){
+    // assert legal usage of a single parameter after prog name
+    if (argc != 2){
+        print_server_usage();
+        exit(-1);
+    }
 
-//int main(int argc, char const *argv[]){
-//    // assert legal usage of a single parameter after prog name
-//    if (argc != 2){
-//        print_server_usage();
-//        exit(-1);
-//    }
-//
-//    // read port number and assert legal - ports positive and are bounded by ushort max
-//    size_t * idx;
-//    auto port = std::stoi(argv[1], idx, 10 /* base 10 */);
-//
-//    if (port < 0 or port > USHRT_MAX){
-//        print_server_usage();
-//        exit(-1);
-//    }
-//    Server server{(unsigned short)port};
-//
-//}
+    // read port number and assert legal - ports positive and are bounded by ushort max
+    size_t * idx;
+    auto port = atoi(argv[1]);
+
+    if (port < 0 or port > USHRT_MAX){
+        print_server_usage();
+        exit(-1);
+    }
+    Server server{(unsigned short)port};
+    server._Run();
+
+}

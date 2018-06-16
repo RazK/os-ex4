@@ -30,8 +30,8 @@
 class Client{
 public:
     //ctors & dtors
-    Client(); // TODO: Raz: Remove after done testing
-    Client(const std::string clientName, const std::string serverAddress, const std::string serverPort );
+//    Client();
+    Client(const std::string clientName, const std::string serverAddress, const int serverPort );
     ~Client();
 
 private:
@@ -39,17 +39,19 @@ private:
 //    const std::string _clientName;
 //    const std::string _serverAddress;
 //    const unsigned int _serverPort;
-    int _sock_fd;
-    int _create_group_fd;
-    int _send_fd;
-    int _who_fd;
-    int _exit_fd;
+//    int _sock_fd;
+//    int _create_group_fd;
+//    int _send_fd;
+//    int _who_fd;
+//    int _exit_fd;
 
     struct sockaddr_in sa;
     struct hostent *hp;
     int s;
 
     char* buf;
+
+    std::string name;
 
     //methods
 public: // TODO: Raz: Resume private after done debugging
@@ -60,9 +62,11 @@ public: // TODO: Raz: Resume private after done debugging
     ErrorCode _RequestWho() const;
     ErrorCode _RequestExist() const;
 
+    ErrorCode _Run() ;
+
     bool _uniqueName(std::string newName) const;
 
-    ErrorCode _callSocket(char *hostname, unsigned short port);
+    ErrorCode _callSocket(const char *hostname, unsigned short port);
 
     int _readData(int n);
 };

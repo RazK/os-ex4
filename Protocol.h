@@ -95,4 +95,7 @@ typedef struct _ExitMessage{
 
 bool isValidName(const std::string& name);
 
+int _readData(int socket, void * buf , size_t n);
+
+
 #endif //OSEX4_PROTOCOL_H

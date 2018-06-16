@@ -34,7 +34,7 @@ public:
 
     explicit Server(unsigned short port);
 
-    ~Server();
+    ~Server() = default;
 
 private:
     // fields
@@ -46,9 +46,9 @@ private:
 
     char myname[WA_MAX_NAME + 1];
     int serverSocketClient;
-    fd_set * clientSocketSet;
-    fd_set * writeSocketSet;
-    fd_set * excptSocketSet;
+    fd_set  clientSocketSet;
+//    fd_set * writeSocketSet;
+//    fd_set * excptSocketSet;
 
 
     struct sockaddr_in sa;
@@ -66,12 +66,6 @@ private:
 
 // TODO: RazK: Resume private after testing
 public:
-    int _create_group_fd;
-    int _send_fd;
-    int _who_fd;
-    int _exit_fd;
-
-
     ErrorCode _Run(); // loops with select : calls _HandleIncomingMessage on modified sockets
     ErrorCode _HandleIncomingMessage(int socket); // Calls the parser on relevent socket
 
@@ -79,17 +73,22 @@ public:
 public:
     ErrorCode _ParseMessage(const clientWrapper & client); // TODO: RazK: Remve after debug (or change
     // signature)
-    ErrorCode _ParseName(int socket, std::string& /* OUT */ clientName);
-    ErrorCode _ParseCreateGroup(std::string& /* OUT */ groupName,
+    ErrorCode _ParseName(int client_sock,
+                         std::string& /* OUT */ clientName);
+    ErrorCode _ParseCreateGroup(const clientWrapper& client,
+                                std::string& /* OUT */ groupName,
                                 std::string& /* OUT */ listOfClientNames) const;
-    ErrorCode _ParseSendMessage(std::string& /* OUT */ targetName,
+    ErrorCode _ParseSendMessage(const clientWrapper& client,
+                                std::string& /* OUT */ targetName,
                                 std::string& /* OUT */ message) const;
-    ErrorCode _HandleCreateGroup(const std::string& groupName,
+    ErrorCode _HandleCreateGroup(const clientWrapper& client,
+                                 const std::string& groupName,
                                  const std::string& listOfClientNames);
-    ErrorCode _HandleSendMessage(const std::string& targetName,
+    ErrorCode _HandleSendMessage(const clientWrapper& client,
+                                 const std::string& targetName,
                                  const std::string& message);
     ErrorCode _HandleWho(const clientWrapper& client);
-    ErrorCode _HandleExit();
+    ErrorCode _HandleExit(const clientWrapper& client);
 
     int _get_connection();
 

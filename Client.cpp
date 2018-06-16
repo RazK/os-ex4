@@ -11,54 +11,54 @@
 #include <stdio.h>
 #include <netinet/in.h>
 
-Client::Client() {
-    char * addr{"aqua-81"};
-    int port = 8080;
-    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
-        printf("Err in socket calling\n");
-        return ;
-    }
-    write(this->s, "finally, a message", 100);
-    this->_readData(1024);
-
-    printf("Client read: %serverSocketClient", this->buf);
-
-    // TODO: REMOVE THESE LINES
-    this->_sock_fd = open("/cs/+/usr/razkarl/os-ex4/client_test.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_sock_fd == -1)
-    {
-        perror("open failed");
-    }
-    this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
-                                                                               O_NONBLOCK);
-    if (this->_create_group_fd == -1)
-    {
-        perror("open create_group.txt failed");
-    }
-
-    this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_send_fd == -1)
-    {
-        perror("open send.txt failed");
-    }
-
-    this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_who_fd == -1)
-    {
-        perror("open who.txt failed");
-    }
-
-    this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-    if (this->_exit_fd == -1)
-    {
-        perror("open exit.txt failed");
-    }
-}
+//Client::Client() {
+//    char * addr{"aqua-81"};
+//    int port = 8080;
+//    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
+//        printf("Err in socket calling\n");
+//        return ;
+//    }
+//    write(this->s, "finally, a message", 100);
+//    this->_readData(1024);
+//
+//    printf("Client read: %serverSocketClient", this->buf);
+//
+//    // TODO: REMOVE THESE LINES
+//    this->_sock_fd = open("/cs/+/usr/razkarl/os-ex4/client_test.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_sock_fd == -1)
+//    {
+//        perror("open failed");
+//    }
+//    this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
+//                                                                               O_NONBLOCK);
+//    if (this->_create_group_fd == -1)
+//    {
+//        perror("open create_group.txt failed");
+//    }
+//
+//    this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_send_fd == -1)
+//    {
+//        perror("open send.txt failed");
+//    }
+//
+//    this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_who_fd == -1)
+//    {
+//        perror("open who.txt failed");
+//    }
+//
+//    this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_exit_fd == -1)
+//    {
+//        perror("open exit.txt failed");
+//    }
+//}
 Client::~Client() {}
 
 
-ErrorCode Client::_callSocket(char *hostname, unsigned short port) {
-    printf("HOST %s \n", hostname);
+ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
+//    printf("HOST %s \n", hostname);
     this->hp= gethostbyname (hostname);
     if (this->hp == nullptr) {
         printf("failed to get host by name");
@@ -81,28 +81,14 @@ ErrorCode Client::_callSocket(char *hostname, unsigned short port) {
 
         return ErrorCode::FAIL;
     }
+    print_connection();
+
+    ASSERT_SUCCESS(_TellName(this->name), "Failed in tellname in connection");
     return ErrorCode::SUCCESS;
 }
 
-int Client::_readData(int n) {
-    int bcount;
-    /* counts bytes read */
-    ssize_t br;
-    /* bytes read this pass */
-    bcount = 0;
-    br = 0;
-    while (bcount < n) { /* loop until full buffer */
-        br = read(this->s, this->buf, (size_t)n - bcount);
-        if ((br > 0)){
-            bcount += br;
-            this->buf += br; //Todo: why add val to char *?
-        }
-        if (br < 1) {
-            return(-1);
-        }
-    }
-    return(bcount);
-}
+
+
 
 ErrorCode Client::_TellName(const std::string& myName){
     // Pad name with zeros up to WA_MAX_NAME
@@ -110,7 +96,7 @@ ErrorCode Client::_TellName(const std::string& myName){
     maxName.resize(WA_MAX_NAME, 0);
 
     // Send padded name to host
-    ASSERT_WRITE(this->_send_fd, &maxName, WA_MAX_NAME);
+    ASSERT_WRITE(this->s, &maxName, WA_MAX_NAME);
 
     return ErrorCode::SUCCESS;
 }
@@ -136,11 +122,11 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
     msg.clientNames = listOfClientNames.c_str();
 
     // Send message
-    ASSERT_WRITE(_create_group_fd, &msg.mtype, sizeof(msg.mtype));
-    ASSERT_WRITE(_create_group_fd, &msg.nameLen, sizeof(msg.nameLen));
-    ASSERT_WRITE(_create_group_fd, msg.groupName, groupName.length());
-    ASSERT_WRITE(_create_group_fd, &msg.clientsLen, sizeof(msg.clientsLen));
-    ASSERT_WRITE(_create_group_fd, msg.clientNames, listOfClientNames.length());
+    ASSERT_WRITE(this->s, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->s, &msg.nameLen, sizeof(msg.nameLen));
+    ASSERT_WRITE(this->s, msg.groupName, groupName.length());
+    ASSERT_WRITE(this->s, &msg.clientsLen, sizeof(msg.clientsLen));
+    ASSERT_WRITE(this->s, msg.clientNames, listOfClientNames.length());
 
     return ErrorCode::SUCCESS;
 }
@@ -163,11 +149,11 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     msg.msg = message.c_str();
 
     // Send message
-    ASSERT_WRITE(_send_fd, &msg.mtype, sizeof(msg.mtype));
-    ASSERT_WRITE(_send_fd, &msg.nameLen, sizeof(msg.nameLen));
-    ASSERT_WRITE(_send_fd, msg.targetName, targetName.length());
-    ASSERT_WRITE(_send_fd, &msg.messageLen, sizeof(msg.messageLen));
-    ASSERT_WRITE(_send_fd, msg.msg, message.length());
+    ASSERT_WRITE(this->s, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->s, &msg.nameLen, sizeof(msg.nameLen));
+    ASSERT_WRITE(this->s, msg.targetName, targetName.length());
+    ASSERT_WRITE(this->s, &msg.messageLen, sizeof(msg.messageLen));
+    ASSERT_WRITE(this->s, msg.msg, message.length());
 
     return ErrorCode::SUCCESS;
 }
@@ -177,7 +163,7 @@ ErrorCode Client::_RequestWho() const
     WhoMessage msg; // msg_type = WHO
 
     // Send message
-    ASSERT_WRITE(_who_fd, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->s, &msg.mtype, sizeof(msg.mtype));
 
     return ErrorCode::SUCCESS;
 }
@@ -187,14 +173,40 @@ ErrorCode Client::_RequestExist() const
     ExitMessage msg; // msg_type = Exit
 
     // Send message
-    ASSERT_WRITE(_exit_fd, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->s, &msg.mtype, sizeof(msg.mtype));
 
     return ErrorCode::SUCCESS;
 }
 
-//int main(int argc, char const *argv[]){
-//
-//    Client client{};
-//
-//}
+ErrorCode Client::_Run() {
+
+    return FAIL;
+}
+
+Client::Client(const std::string clientName, const std::string serverAddress, const int serverPort) {
+    this->name = clientName;
+
+    if (ErrorCode::SUCCESS != this->_callSocket(serverAddress.c_str(), serverPort)){
+        printf("Err in socket calling\n");
+        return ;
+    }
+
+
+}
+
+int main(int argc, char const *argv[]){
+    if (argc != 4){
+        print_client_usage();
+        exit(-1);
+    }
+    std::string name = argv[1];
+    std::string addr = argv[2]; //TODO: inet to a   -- for ip adr
+
+    int port =  std::stoi(argv[3], nullptr, 10);
+
+    Client client{name, addr, port};
+
+
+    client._Run();
+}
 
