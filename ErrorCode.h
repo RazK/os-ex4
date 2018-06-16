@@ -20,6 +20,28 @@ do {                                        \
     }                                       \
 } while (0)
 
+#define ASSERTANDRET(cond, msg, retVal)     \
+do {                                        \
+    if (cond) {                             \
+        std::cerr <<  (msg) << std::endl;   \
+        return retVal;                      \
+    }                                       \
+} while (0)
+
+#define ASSERTANDDO(cond, f)                \
+do {                                        \
+    if (cond) {                             \
+        return f();                         \
+    }                                       \
+} while (0)
+
+#define ASSERTANDEXIT_SUCCESS(f, msg)       ASSERTANDEXIT((ErrorCode::SUCCESS != (f)), msg)
+#define ASSERTANDRET_SUCCESS(f, msg)        ASSERTANDRET((ErrorCode::SUCCESS != (f)), msg, ErrorCode::FAIL)
+#define ASSERTANDDO_SUCCESS(val, f)         ASSERTANDDO((ErrorCode::SUCCESS != (val)), f)
+
+
+#define ASSERTANDRET_NOT_NULL(obj, msg)     ASSERTANDRET((nullptr != (obj)), msg, ErrorCode::FAIL)
+
 #define ASSERT_WRITE(fd, buf, count)        ASSERT(count == write(fd, buf, count), "Write error")
 #define ASSERT_READ(fd, buf, count)        ASSERT(count == read(fd, buf, count), "Read error")
 
