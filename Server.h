@@ -14,6 +14,8 @@
 #include <netdb.h>                  // gethostbyname
 #include <climits>                  // max of unsigned short
 
+#include <sys/select.h>             // set and select
+
 
 
 #include "whatsappio.h"
@@ -21,6 +23,8 @@
 #include "Protocol.h"
 
 const int maxNumConnected = 10;
+
+#define EXIT ("EXIT")
 
 
 
@@ -41,11 +45,18 @@ private:
 //    struct sockaddr_in serv_addr, cli_addr;
 
     char myname[WA_MAX_NAME + 1];
-    int s;
+    int serverSocketClient;
+    fd_set * clientSocketSet;
+    fd_set * writeSocketSet;
+    fd_set * excptSocketSet;
+
+
     struct sockaddr_in sa;
     struct sockaddr_in cli_addr;
     struct hostent *hp;
     socklen_t clilen;
+
+    std::vector<clientWrapper> connectedClients;
 
     //methods
     ErrorCode _establish(unsigned short port);
@@ -79,6 +90,14 @@ private:
     ErrorCode _HandleExit() const;
 
     int _get_connection();
+
+    int numOfActiveSockets;
+
+    void _serverStdInput();
+
+    void _connectNewClient();
+
+    void _handleClientRequest();
 };
 
 #endif //OSEX4_SERVER_H

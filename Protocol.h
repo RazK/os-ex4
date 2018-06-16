@@ -9,6 +9,12 @@
 #include "whatsappio.h"
 
 
+struct clientWrapper{
+    int sock;
+    std::string name;
+};
+
+
 /** 'CREATE_GROUP' message:
  * +------+----------+------------+-------------+--------------+
  * |   1  |     1    |  name_len  |      4      |  clients_len |

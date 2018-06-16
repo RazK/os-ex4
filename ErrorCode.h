@@ -14,7 +14,7 @@ typedef enum _ErrorCode{
 
 #define ASSERT(cond, msg)                   \
 do {                                        \
-    if (!(cond)) {                             \
+    if (!(cond)) {                          \
         std::cerr <<  (msg) << std::endl;   \
         exit(-1);                           \
     }                                       \
