@@ -11,4 +11,14 @@ typedef enum _ErrorCode{
     NOT_IMPLEMENTED = 1
 } ErrorCode;
 
+#define ASSERT(cond, msg)                   \
+do {                                        \
+    if (cond) {                             \
+        std::cerr <<  (msg) << std::endl;   \
+        exit(-1);                           \
+    }                                       \
+} while (0)
+
+#define ASSERT_SUCCESS(f, msg)  ASSERT((ErrorCode::SUCCESS != (f)), msg)
+
 #endif //OSEX4_ERRORCODE_H
