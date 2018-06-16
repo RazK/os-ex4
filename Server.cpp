@@ -142,6 +142,9 @@ ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName)
     clientName = temp;
     clientName.resize(nameLen);
 
+    // Assert name is legal
+    ASSERT(isValidName(clientName), "Invalid client name characters");
+
     return ErrorCode::SUCCESS;
 }
 
@@ -161,6 +164,9 @@ ErrorCode Server::_ParseCreateGroup(const clientWrapper& client, std::string& /*
     // Read group name
     ASSERT_READ(client.sock, &groupName[0], nameLen);
     groupName.resize(nameLen);
+
+    // Assert name is legal
+    ASSERT(isValidName(groupName), "Invalid group name characters");
 
     // Parse client-names length
     ASSERT_READ(client.sock, &clientsLen, sizeof(clients_len));
@@ -195,6 +201,11 @@ ErrorCode Server::_ParseSendMessage(const clientWrapper& client,
     targetName.resize(nameLen);
 
     // Parse client-names length
+    ASSERT_READ(client.sock, &messageLen, sizeof(message_len));
+    // Assert name is legal
+    ASSERT(isValidName(targetName), "Invalid target name characters");
+
+    // Parse message length
     ASSERT_READ(client.sock, &messageLen, sizeof(message_len));
     messageLen = ntohs(messageLen);
 
