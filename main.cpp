@@ -13,14 +13,14 @@ int main() {
     std::cout << "who.msg_type = " << (char)(WhoMessage().mtype + '0') <<
               std::endl;
 
-    Client testClient;
-    testClient._RequestCreateGroup("abcdef", "cyber,raz,shimmy");
-    testClient._RequestSendMessage("raz", "hey malord I'm your slave");
-    testClient._RequestWho();
-    testClient._RequestExist();
+    //Client testClient;
+    //testClient._RequestCreateGroup("abcdef", "cyber,raz,shimmy");
+    //testClient._RequestSendMessage("raz", "hey malord I'm your slave");
+    //testClient._RequestWho();
+    //testClient._RequestExist();
 
-    Server testServer;
-    testServer._ParseMessage(testServer._send_fd);
+    //Server testServer;
+    //testServer._ParseMessage(testServer._send_fd);
 
 //    char* foo = "1234\00056789";
 //    std::string bar = "123\000123";

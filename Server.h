@@ -24,7 +24,7 @@
 
 const int maxNumConnected = 10;
 
-#define EXIT ("EXIT")
+#define SERVER_INPUT_EXIT "EXIT"
 
 
 
