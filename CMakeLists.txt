@@ -4,8 +4,8 @@ project(OSEx4)
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES main.cpp )
-set(CLIENT_SOURCE_FILES Client.cpp Client.h Messages.cpp Messages.h ErrorCode.h)
-set(SERVER_SOURCE_FILES Server.cpp Server.h Messages.cpp Messages.h ErrorCode.h)
+set(CLIENT_SOURCE_FILES Client.cpp Client.h ErrorCode.h)
+set(SERVER_SOURCE_FILES Server.cpp Server.h ErrorCode.h)
 
 add_executable(testMain ${SOURCE_FILES} )
 
