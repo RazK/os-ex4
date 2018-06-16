@@ -11,7 +11,19 @@
 #include <stdio.h>
 #include <netinet/in.h>
 
-Client::Client() : _serverPort(), _serverAddress(){
+Client::Client() {
+    char * addr{"aqua-81"};
+    int port = 8080;
+    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
+        printf("Err in socket calling\n");
+        return ;
+    }
+    write(this->s, "finally, a message", 100);
+    this->_readData(1024);
+
+    printf("Client read: %s", this->buf);
+
+    // TODO: REMOVE THESE LINES
     this->_sock_fd = open("/cs/+/usr/razkarl/os-ex4/client_test.txt", O_CREAT | O_RDWR | O_NONBLOCK);
     if (this->_sock_fd == -1)
     {
@@ -176,26 +188,9 @@ ErrorCode Client::_RequestExist() const
     return ErrorCode::SUCCESS;
 }
 
-Client::Client():
-_serverPort(0)
-
-{
-    char * addr{"aqua-81"};
-    int port = 8080;
-    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
-        printf("Err in socket calling\n");
-        return ;
-    }
-    write(this->s, "finally, a message", 100);
-    this->_readData(1024);
-
-    printf("Client read: %s", this->buf);
-
-}
-
-int main(int argc, char const *argv[]){
-
-    Client client{};
-
-}
+//int main(int argc, char const *argv[]){
+//
+//    Client client{};
+//
+//}
 
