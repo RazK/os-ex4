@@ -9,8 +9,12 @@
 #include "Protocol.h"
 
 Server::Server(unsigned short port) {
-    this->_establish(port);
-
+    if (ErrorCode::SUCCESS != this->_establish(port)){
+        print_fail_connection();
+    }
+    this->_get_connection();
+    print_connection();
+//    print_connection_server();
 }
 
 ErrorCode Server::_closeConnection(){
@@ -47,16 +51,17 @@ ErrorCode Server::_ParseCreateGroup(CreateGroupMessage& /* OUT */ foo) const
     //CreateGroupMessage
     return ErrorCode::SUCCESS;
 }
-ErrorCode _ParseCreateGroup(CreateGroupMessage& /* OUT */ msg){
+ErrorCode Server::_ParseWho(WhoMessage /* OUT */ msg) const{
+    return ErrorCode::NOT_IMPLEMENTED;
 
 }
-ErrorCode _ParseSendMessage(SendMessage& /* OUT */ msg) {
 
+ErrorCode Server::_ParseSendMessage(SendMessage & /* OUT */ msg) const {
+    return ErrorCode::NOT_IMPLEMENTED;
 }
-ErrorCode _ParseWho(WhoMessage /* OUT */ msg) {
 
-}
-ErrorCode _ParseExist(ExitMessage /* OUT */ msg) {
+ErrorCode Server::_ParseExist(ExitMessage /* OUT */ msg) const {
+    return ErrorCode::NOT_IMPLEMENTED;
 
 }
 
@@ -68,16 +73,12 @@ ErrorCode Server::_establish(unsigned short port) {
         printf("gethostname failure in server establish connection");
         return ErrorCode::FAIL;
     }
-    printf("MY HOST NAME: %s \n", myname);
+//    printf("MY HOST NAME: %s \n", myname);
 
     this->hp = gethostbyname(myname);
 
-    printf("MY HP NAME:  %s \n", this->hp->h_name);
-
-
     if (this->hp == nullptr){
         printf("got nullptr for gethostbyname in server establish connection");
-        printf(myname);
         return ErrorCode::FAIL;
     }
 
@@ -95,7 +96,6 @@ ErrorCode Server::_establish(unsigned short port) {
     this->s = socket(AF_INET, SOCK_STREAM, 0);
     if(this->s < 0){
         printf("err whilst creating socket in server establish connection");
-        printf(myname);
         return ErrorCode::FAIL;
 
     }
@@ -156,6 +156,8 @@ Server::Server() {
 
 
 }
+
+
 //
 //int main(int argc, char const *argv[]){
 //    printf("Opening Server\n");
