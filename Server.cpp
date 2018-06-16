@@ -5,7 +5,7 @@
 #include "Server.h"
 
 Server::Server(unsigned short port) {
-    ASSERTANDDO_SUCCESS(this->_establish(port);
+    ASSERTANDDO_SUCCESS(this->_establish(port), );
 
 }
 
