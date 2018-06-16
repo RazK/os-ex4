@@ -31,6 +31,8 @@ private:
     socklen_t clilen;
     char buffer[256];
 
+    struct sockaddr_in serv_addr, cli_addr;
+
 
 };
 
