@@ -9,8 +9,9 @@
 #define WA_MAX_MESSAGE 256
 #define WA_MAX_GROUP 50
 #define WA_MAX_INPUT ((WA_MAX_NAME+1)*(WA_MAX_GROUP+2))
+#define WA_HEADER_SIZE sizeof(command_type)
 
-enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID};
+typedef enum _command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID} command_type;
 
 /*
  * Description: Prints to the screen a message when the user terminate the
