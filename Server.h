@@ -12,6 +12,7 @@
 #include <iostream>
 #include <unistd.h>                 // gethostname
 #include <netdb.h>                  // gethostbyname
+#include <climits>                  // max of unsigned short
 
 
 
@@ -25,11 +26,11 @@ const int maxNumConnected = 10;
 
 class Server{
 public:
-    Server();
+//    Server();
 
-    Server(unsigned short port);
+    explicit Server(unsigned short port);
 
-    ~Server() = default;
+    ~Server();
 
 private:
     // fields

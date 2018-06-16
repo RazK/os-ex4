@@ -107,9 +107,11 @@ void print_error(const std::string& function_name, int error_number) {
     printf("ERROR: %s %d.\n", function_name.c_str(), error_number);
 }
 
-void parse_command(const std::string& command, command_type& commandT, 
-                   std::string& name, std::string& message, 
-                   std::vector<std::string>& clients) {
+void parse_command(const std::string& command,
+                   command_type& commandT, /*OUT*/
+                   std::string& name,  /*OUT*/
+                   std::string& message,  /*OUT*/
+                   std::vector<std::string>& clients /*OUT*/) {
     char c[WA_MAX_INPUT];
     const char *s; 
     char *saveptr;

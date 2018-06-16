@@ -11,10 +11,10 @@
 Server::Server(unsigned short port) {
     if (ErrorCode::SUCCESS != this->_establish(port)){
         print_fail_connection();
+        return ;
     }
-    this->_get_connection();
     print_connection();
-//    print_connection_server();
+    this->_get_connection();
 }
 
 ErrorCode Server::_closeConnection(){
@@ -127,43 +127,56 @@ int Server::_get_connection() {
     return t;
 }
 
-Server::Server() {
-    if (ErrorCode::SUCCESS != this->_establish(8080)){
-        printf("failed to establish connection");
-    }
+//Server::Server() {
+//    if (ErrorCode::SUCCESS != this->_establish(8080)){
+//        printf("failed to establish connection");
+//    }
+//
+//    char buffer[256];
+//
+//    int newsockfd = this->_get_connection();
+//
+//    if (newsockfd >= 0){
+//        send(newsockfd, "Hello, world!\n", 13, 0);
+//
+//        bzero(buffer,256);
+//
+//        int n = read(newsockfd,buffer,255);
+//        if (n < 0) {
+//            printf("ERROR reading from socket");
+//        }
+//        printf("Here is the message: %s\n",buffer);
+//
+//        close(newsockfd);
+//        close(this->s);
+//    } else {
+//        printf("Negative communication socket\n");
+//        return ;
+//    }
+//
+//
+//}
 
-    char buffer[256];
-
-    int newsockfd = this->_get_connection();
-
-    if (newsockfd >= 0){
-        send(newsockfd, "Hello, world!\n", 13, 0);
-
-        bzero(buffer,256);
-
-        int n = read(newsockfd,buffer,255);
-        if (n < 0) {
-            printf("ERROR reading from socket");
-        }
-        printf("Here is the message: %s\n",buffer);
-
-        close(newsockfd);
-        close(this->s);
-    } else {
-        printf("Negative communication socket\n");
-        return ;
-    }
-
+Server::~Server() {
 
 }
 
 
-//
 //int main(int argc, char const *argv[]){
-//    printf("Opening Server\n");
+//    // assert legal usage of a single parameter after prog name
+//    if (argc != 2){
+//        print_server_usage();
+//        exit(-1);
+//    }
 //
-//    Server server{};
-//    printf("Closing Server\n");
+//    // read port number and assert legal - ports positive and are bounded by ushort max
+//    size_t * idx;
+//    auto port = std::stoi(argv[1], idx, 10 /* base 10 */);
 //
+//    if (port < 0 or port > USHRT_MAX){
+//        print_server_usage();
+//        exit(-1);
+//    }
+//    Server server{(unsigned short)port};
 //
 //}
