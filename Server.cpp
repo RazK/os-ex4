@@ -9,7 +9,7 @@
 #include "Protocol.h"
 
 Server::Server(unsigned short port) {
-    ASSERTANDDO_SUCCESS(this->_establish(port), );
+    this->_establish(port);
 
 }
 
@@ -34,7 +34,7 @@ ErrorCode Server::_establish(unsigned short port) {
     this->sa.sin_family = this->hp->h_addrtype;
 
     /* this is our host address */
-    memcpy(this->&sa.sin_addr, this->hp->h_addr, this->hp->h_length);
+    memcpy(&this->sa.sin_addr, this->hp->h_addr, this->hp->h_length);
 
     /* this is our port number */
     this->sa.sin_port = htons(port);
@@ -43,9 +43,11 @@ ErrorCode Server::_establish(unsigned short port) {
     ASSERTANDRET_SUCCESS((this->s = socket(AF_INET, SOCK_STREAM, 0)),
                          "err whilst creating socket in server establish connection");
 
-    ASSERTANDDO((bind(this->s , (struct sockaddr *)&(this->sa) , sizeof(struct sockaddr_in)) < 0),
-                "err whilst binding socket in server establish connection",
-                _closeConnection);
+    if (bind(this->s , (struct sockaddr *)&(this->sa) , sizeof(struct sockaddr_in)) < 0){
+        printf ("woops");
+        return _closeConnection();
+    }
+
 
     /* max # of queued connects */
     ASSERTANDRET_SUCCESS(listen(this->s, maxNumConnected), "failed to listen in server establish connection");
