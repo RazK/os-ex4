@@ -105,6 +105,17 @@ int Client::_readData(int n) {
     return(bcount);
 }
 
+ErrorCode Client::_TellName(const std::string& myName){
+    // Pad name with zeros up to WA_MAX_NAME
+    std::string maxName(myName);
+    maxName.resize(WA_MAX_NAME, 0);
+
+    // Send padded name to host
+    ASSERT_WRITE(this->_send_fd, &maxName, WA_MAX_NAME);
+
+    return ErrorCode::SUCCESS;
+}
+
 
 ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
                                       const std::string& listOfClientNames)

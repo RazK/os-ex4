@@ -70,13 +70,19 @@ ErrorCode Server::_ParseMessage(int socket)
     return ErrorCode::SUCCESS;
 }
 
-ErrorCode _ParseName(int sock_fd, std::string& clientName){
+ErrorCode Server::_ParseName(int sock_fd, std::string& /* OUT */ clientName){
+    // Read Name
     ASSERT_READ(sock_fd, &clientName[0], WA_MAX_NAME);
+
+    // Resize up to '\0'
+    int nameLen = strnlen(clientName.c_str(), WA_MAX_NAME);
+    clientName.resize(nameLen);
+
     return ErrorCode::SUCCESS;
 }
 
-ErrorCode Server::_ParseCreateGroup(std::string& groupName,
-                                    std::string& listOfClientNames) const
+ErrorCode Server::_ParseCreateGroup(std::string& /* OUT */ groupName,
+                                    std::string& /* OUT */ listOfClientNames) const
 {
     name_len nameLen;
     clients_len clientsLen;
