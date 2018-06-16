@@ -34,10 +34,10 @@ public:
     ~Client();
 
 private:
-    //fields
-    const std::string _clientName;
-    const std::string _serverAddress;
-    const unsigned int _serverPort;
+//    //fields
+//    const std::string _clientName;
+//    const std::string _serverAddress;
+//    const unsigned int _serverPort;
     int _sock_fd;
     int _create_group_fd;
     int _send_fd;

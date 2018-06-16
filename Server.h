@@ -56,7 +56,7 @@ private:
     int _who_fd;
     int _exit_fd;
 
-    ErrorCode Server::_ParseMessage(int socket); // TODO: RazK: Remve after debug (or change
+    ErrorCode _ParseMessage(int socket); // TODO: RazK: Remve after debug (or change
     // signature)
 
     ErrorCode _ParseCreateGroup(CreateGroupMessage& /* OUT */ msg) const;
