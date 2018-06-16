@@ -170,7 +170,11 @@ ErrorCode Server::_HandleSendMessage(const std::string& targetName,
 
 ErrorCode Server::_HandleWho()
 {
-    return ErrorCode::NOT_IMPLEMENTED;
+    
+    for (auto i = this->connectedClients.begin(); i != this->connectedClients.end(); ++i){
+
+    }
+    return ErrorCode::SUCCESS;
 }
 
 ErrorCode Server::_HandleExit()
