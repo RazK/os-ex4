@@ -281,7 +281,7 @@ ErrorCode Server::_HandleSendMessage(const clientWrapper& client,
 
     if (valid){
         auto targetClientW = this->_getClient(targetName);
-        ASSERT(nullptr != &targetClientW, "Got unexpected nullptr in handle message" );
+        ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
             //TODO: flush message to the target using the targetClientW
     }
 
@@ -453,7 +453,7 @@ const clientWrapper Server::_getClient(const std::string &name) const{
             return client;
         }
     }
-    return clientWrapper{NULL, nullptr};
+    return clientWrapper{-1, ""};
 }
 
 ErrorCode Server::_HandleIncomingMessage(int socket) {
