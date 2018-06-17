@@ -41,9 +41,9 @@ do {                                        \
 #define ASSERTANDDO_SUCCESS(val, f)         ASSERTANDDO((ErrorCode::SUCCESS != (val)), f)
 #define ASSERTANDRET_NOT_NULL(obj, msg)     ASSERTANDRET((nullptr != (obj)), msg, ErrorCode::FAIL)
 
-#define ASSERT_WRITE(fd, buf, count)        ASSERT(count == write(fd, buf, count), "Write error")
-#define ASSERT_READ(fd, buf, count)        ASSERT(count == _readData(fd, buf, count), "Read error")
+#define ASSERT_WRITE(fd, buf, count)        ASSERT((count) == write(fd, buf, count), "Write error")
+#define ASSERT_READ(fd, buf, count)         ASSERT((count) == _readData(fd, buf, count), "Read error")
 
-#define ASSERT_SUCCESS(f, msg)  ASSERT((ErrorCode::SUCCESS == (f)), msg)
+#define ASSERT_SUCCESS(f, msg)              ASSERT((ErrorCode::SUCCESS == (f)), msg)
 
 #endif //OSEX4_ERRORCODE_H

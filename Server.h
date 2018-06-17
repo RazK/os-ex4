@@ -22,6 +22,12 @@
 #include "ErrorCode.h"
 #include "Protocol.h"
 
+
+#include <unistd.h>
+#include <algorithm>
+
+#include "Protocol.h"
+
 const int maxNumConnected = 10;
 
 #define SERVER_INPUT_EXIT "EXIT"

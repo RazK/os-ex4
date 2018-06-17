@@ -2,14 +2,8 @@
 // Created by heimy4prez on 6/16/18.
 //
 
-#include <unistd.h>
-#include <fcntl.h>
 #include "Client.h"
-#include "Protocol.h"
-#include <iostream>
-#include <fstream>
-#include <stdio.h>
-#include <netinet/in.h>
+
 
 //Client::Client() {
 //    char * addr{"aqua-81"};

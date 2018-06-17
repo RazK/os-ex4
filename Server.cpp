@@ -6,11 +6,8 @@
 //
 
 //#include <fcntl.h>
-#include <unistd.h>
-#include <algorithm>
-
 #include "Server.h"
-#include "Protocol.h"
+
 
 Server::Server(unsigned short port) {
     numOfActiveSockets = 10; // 1 socket always listening for new clients // TODO: Determine actual number
@@ -222,6 +219,10 @@ ErrorCode Server::_ParseSendMessage(const clientWrapper& client,
     return ErrorCode::SUCCESS;
 }
 
+bool compareClientWrapper(const clientWrapper& cw1, const clientWrapper& cw2){
+    return cw1.name < cw2.name;
+}
+
 ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
                                      const std::string& groupName,
                                      const std::string& listOfClientNames)
@@ -230,13 +231,16 @@ ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
     std::vector<std::string> groupMembers;
     split(listOfClientNames, ',', groupMembers);
 
+    // add the calling client to group, just in case not in it.
+    groupMembers.emplace_back(client.name);
+
     // make unique and clip
     std::sort(groupMembers.begin(), groupMembers.end());
     auto it = std::unique(groupMembers.begin(), groupMembers.end());
     groupMembers.resize((unsigned long)std::distance(groupMembers.begin(), it));
 
     //also sort the list of clients this server has connected to, for good measure and runtime
-    std::sort(this->connectedClients.begin(), this->connectedClients.end());
+    std::sort(this->connectedClients.begin(), this->connectedClients.end(), compareClientWrapper);
 
     // logic for valid group member list
     bool valid = (isValidName(groupName) &&                         // legal group name
@@ -250,8 +254,11 @@ ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
 
 
     if (valid){
-        groupMembers.emplace_back();                                // add this client to list just in case
-        this->groups.emplace(groupName, groupMembers); //TODO: maybe should clientWrapper rather than string?
+        std::vector<clientWrapper> wrappedGroup;
+        for (const auto &name : groupMembers) {
+            wrappedGroup.emplace_back(this->_getClient(name));
+        }
+        this->groups.emplace(std::pair<std::string, std::vector<clientWrapper>>(groupName, wrappedGroup)); //TODO: maybe should clientWrapper rather than string?
     }
 
     print_create_group(true, valid, client.name, listOfClientNames);
@@ -446,7 +453,7 @@ const clientWrapper Server::_getClient(const std::string &name) const{
             return client;
         }
     }
-    return nullptr;
+    return clientWrapper{NULL, nullptr};
 }
 
 ErrorCode Server::_HandleIncomingMessage(int socket) {

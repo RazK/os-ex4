@@ -101,7 +101,7 @@ void split(const std::string& string,
            const char& delim,
            std::vector<std::string> result/*OUT */ );
 
-bool isValidList(const std::vector<std::string>& names)
+bool isValidList(const std::vector<std::string>& names);
 
 
 #endif //OSEX4_PROTOCOL_H

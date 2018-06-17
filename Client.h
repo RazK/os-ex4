@@ -20,11 +20,17 @@
 #include <cstdlib>
 
 
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <netinet/in.h>
+
+#include "Protocol.h"
 #include "ErrorCode.h"
 #include "whatsappio.h"
-
-
-
 
 
 class Client{
