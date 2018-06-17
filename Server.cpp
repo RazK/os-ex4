@@ -114,7 +114,8 @@ ErrorCode Server::_ParseMessage(const clientWrapper& client)
     msg_type mtype = _command_type::INVALID;
     if(0 == _readData(socket, &mtype, sizeof(msg_type)))
     {
-        printf("Read 0 bytes from socket - closed on the other side (client disconnected?)\r\n"); // https://stackoverflow.com/questions/2416944/can-read-function-on-a-connected-socket-return-zero-bytes
+        printf("%s disconnected.\r\n", client.name.c_str()); // https://stackoverflow
+        // .com/questions/2416944/can-read-function-on-a-connected-socket-return-zero-bytes
         return this->_closeConnection(socket);
     }
     switch (mtype)
