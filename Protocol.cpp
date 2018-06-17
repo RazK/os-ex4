@@ -6,6 +6,9 @@
 #include <unistd.h>
 #include <sstream>
 
+int max(int a, int b){
+    return ((a) >= (b) ? (a) : (b));
+}
 
 bool isValidName(const std::string& name){
     for(int i = 0; i < name.length(); i++) {

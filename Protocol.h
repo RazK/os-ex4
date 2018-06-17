@@ -8,7 +8,7 @@
 #include <cstdint>
 #include "whatsappio.h"
 
-#define max(a,b) ((a) >= (b) ? (a) : (b))
+int max(int a, int b);
 
 struct clientWrapper{
     int sock;
