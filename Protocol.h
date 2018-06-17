@@ -97,5 +97,11 @@ bool isValidName(const std::string& name);
 
 int _readData(int socket, void * buf , size_t n);
 
+void split(const std::string& string,
+           const char& delim,
+           std::vector<std::string> result/*OUT */ );
+
+bool isValidList(const std::vector<std::string>& names)
+
 
 #endif //OSEX4_PROTOCOL_H

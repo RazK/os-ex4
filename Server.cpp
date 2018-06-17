@@ -225,9 +225,30 @@ ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
                                      const std::string& groupName,
                                      const std::string& listOfClientNames)
 {
-    std::cout << "Server::_HandleCreateGroup\ngroupName : '"<< groupName << "'\nclientsList : '" <<
-                                                                                          listOfClientNames << "'\n\r" << std::endl;
-    return ErrorCode::NOT_IMPLEMENTED;
+    // emplace in groupmembers the results of parsing the list of clients
+    std::vector<std::string> groupMembers;
+    split(listOfClientNames, ',', groupMembers);
+
+    bool valid = (isValidName(groupName) &&                         // legal group name
+        (! groupMembers.empty()) &&                                 // non empty member set
+        (groupMembers.size() <= WA_MAX_GROUP) &&                    // group not too big
+        (groupMembers != std::vector<std::string>{client.name}) &&  // group isn't singlton creator
+        (this->groups.count(groupName) == 0 ) &&                    // unique group name
+        isValidList(groupMembers)                               // All names in list are valid
+//        (allClientsExist)
+    );
+
+
+    if (valid){
+        groupMembers.emplace_back();            // add this client to list just in case
+        this->groups.emplace(groupName, groupMembers);
+    }
+
+    print_create_group(true, valid, client.name, listOfClientNames);
+
+    //TODO: force response in client side
+
+    return ErrorCode::SUCCESS;
 }
 
 ErrorCode Server::_HandleSendMessage(const clientWrapper& client,
@@ -259,7 +280,7 @@ ErrorCode Server::_HandleExit(const clientWrapper& client)
     return ErrorCode::NOT_IMPLEMENTED;
 }
 
-int Server::_get_connection() {
+int Server::_getConnection() {
 //    int t= accept(this->serverSocketClient,NULL, NULL); /* socket of connection */
     clilen = sizeof(cli_addr);
     int t = accept(this->serverSocketClient, (struct sockaddr *) &cli_addr, &clilen);
@@ -271,13 +292,13 @@ int Server::_get_connection() {
 }
 
 
-ErrorCode Server::_Run() {
+ErrorCode Server::_run() {
 //    struct timeval interval{0, 100};
     bool stillRunning = true;
     while (stillRunning){
-        auto readfds = this->clientSocketSet; //TODO: need to make a copy here..
+        auto readfds = this->clientSocketSet;
         if (select(this->numOfActiveSockets+1, &readfds, NULL, NULL, NULL) < 0) {
-            print_error("_Run - select", 1);
+            print_error("_run - select", 1);
             exit(-1);
         }
         if (FD_ISSET(this->serverSocketClient, &readfds)) {
@@ -316,13 +337,13 @@ void Server::_serverStdInput() {
 }
 
 void Server::_connectNewClient() {
-    auto t = _get_connection();
+    auto t = _getConnection();
     if (t < 0){
-        print_error("_Run - connectNewClient", 2);
+        print_error("_run - connectNewClient", 2);
         exit(-1);
     }
     std::string name;
-    ASSERT_SUCCESS(_ParseName(t, name), "Parse name failed in run");
+    ASSERT_SUCCESS(_ParseName(t, name), "Parse name failed in _run");
 
     printf("New Client: %s", name);
 
@@ -330,6 +351,24 @@ void Server::_connectNewClient() {
     this->numOfActiveSockets ++; //increment the number of clients
     FD_SET(t, &this->clientSocketSet);
 
+}
+
+bool Server::_isClient(const std::string& name) const{
+    for (const auto &connectedClient : this->connectedClients) {
+        if (connectedClient.name == name){ // found client that matches
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Server::_isClientList(const std::vector<std::string>& names) const{
+    for (const auto &name : names) {
+        if (!this->_isClient(name)){ // found client that matches
+            return false;
+        }
+    }
+    return true;
 }
 
 ErrorCode Server::_HandleIncomingMessage(int socket) {
@@ -354,6 +393,6 @@ int main(int argc, char const *argv[]){
         exit(-1);
     }
     Server server{(unsigned short)port};
-    server._Run();
+    server._run();
 
 }

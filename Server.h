@@ -15,7 +15,7 @@
 #include <climits>                  // max of unsigned short
 
 #include <sys/select.h>             // set and select
-
+#include <map>
 
 
 #include "whatsappio.h"
@@ -38,11 +38,6 @@ public:
 
 private:
     // fields
-//    int socketfd, newsockfd, port;
-//    socklen_t clilen;
-//    char buffer[256];
-//
-//    struct sockaddr_in serv_addr, cli_addr;
 
     char myname[WA_MAX_NAME + 1];
     int serverSocketClient;
@@ -50,7 +45,7 @@ private:
 //    fd_set * writeSocketSet;
 //    fd_set * excptSocketSet;
 
-
+    std::map <std::string , std::vector <clientWrapper> > groups;
     struct sockaddr_in sa;
     struct sockaddr_in cli_addr;
     struct hostent *hp;
@@ -66,7 +61,7 @@ private:
 
 // TODO: RazK: Resume private after testing
 public:
-    ErrorCode _Run(); // loops with select : calls _HandleIncomingMessage on modified sockets
+    ErrorCode _run(); // loops with select : calls _HandleIncomingMessage on modified sockets
     ErrorCode _HandleIncomingMessage(int socket); // Calls the parser on relevent socket
 
 // TODO: RazK: Resume private after testing
@@ -90,13 +85,17 @@ public:
     ErrorCode _HandleWho(const clientWrapper& client);
     ErrorCode _HandleExit(const clientWrapper& client);
 
-    int _get_connection();
+    int _getConnection();
 
     int numOfActiveSockets;
 
     void _serverStdInput();
 
     void _connectNewClient();
+
+    bool Server::_isClient(const std::string& name) const;
+
+    bool Server::_isClientList(const std::vector<std::string>& names) const;
 
     void _handleClientRequest();
 };
