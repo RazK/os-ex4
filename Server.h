@@ -91,13 +91,30 @@ public:
 
     void _serverStdInput();
 
-    void _connectNewClient();
+    void _HandleNewClient();
 
-    bool Server::_isClient(const std::string& name) const;
 
-    bool Server::_isClientList(const std::vector<std::string>& names) const;
+    /*
+    * Description: Return if name is a group this server has initiated.
+    */
+    bool _isGroup(const std::string& name) const;
+    /*
+     * Description: Return if name is a client this server has connected to.
+    */
+    bool _isClient(const std::string& name) const;
+
+    /*
+     * Description: Return if given list of names is recognized as connected clients in its entirety
+     */
+    bool _isClientList(const std::vector<std::string>& names) const;
+
+    /*
+    *  Description: Return the wrapper object that fits this name, if exists. null is doesnt.
+    */
+    const clientWrapper _getClient(const std::string &name) const;
 
     void _handleClientRequest();
+
 };
 
 #endif //OSEX4_SERVER_H

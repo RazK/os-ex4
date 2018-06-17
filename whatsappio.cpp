@@ -10,7 +10,7 @@ void print_connection() {
 }
 
 void print_connection_server(const std::string& client) {
-    printf("%serverSocketClient connected.\n", client.c_str());
+    printf("%s connected.\n", client.c_str());
 }
 
 
