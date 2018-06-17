@@ -45,9 +45,11 @@ private:
 //    int _who_fd;
 //    int _exit_fd;
 
-    struct sockaddr_in sa;
-    struct hostent *hp;
-    int s;
+    struct sockaddr_in serv_addr;
+    struct hostent *host;
+    fd_set  openSocketsSet;
+
+    int connectedServer;
 
     char* buf;
 
@@ -55,6 +57,9 @@ private:
 
     //methods
 public: // TODO: Raz: Resume private after done debugging
+    ErrorCode _ClientStdInput();
+    ErrorCode _ParseMessageFromServer();
+
     ErrorCode _TellName(const std::string& myName);
     ErrorCode _RequestCreateGroup(const std::string& groupName,
                                   const std::string& listOfClientNames);
@@ -63,6 +68,8 @@ public: // TODO: Raz: Resume private after done debugging
     ErrorCode _RequestExist() const;
 
     ErrorCode _Run() ;
+
+    int _configFDSets();
 
     bool _uniqueName(std::string newName) const;
 

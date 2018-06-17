@@ -45,22 +45,20 @@ private:
 //    struct sockaddr_in serv_addr, cli_addr;
 
     char myname[WA_MAX_NAME + 1];
-    int serverSocketClient;
-    fd_set  clientSocketSet;
+    int welcomeClientsSocket;
+    fd_set  openSocketsSet;
 //    fd_set * writeSocketSet;
 //    fd_set * excptSocketSet;
 
 
-    struct sockaddr_in sa;
-    struct sockaddr_in cli_addr;
-    struct hostent *hp;
-    socklen_t clilen;
+    struct sockaddr_in serve_addr;
+    struct hostent *host;
 
     std::vector<clientWrapper> connectedClients;
 
     //methods
     ErrorCode _establish(unsigned short port);
-    ErrorCode _closeConnection();
+    ErrorCode _closeConnection(int socket);
 
     //struct sockaddr_in serv_addr, cli_addr;
 
@@ -90,9 +88,9 @@ public:
     ErrorCode _HandleWho(const clientWrapper& client);
     ErrorCode _HandleExit(const clientWrapper& client);
 
-    int _get_connection();
+    int _configFDSets();
 
-    int numOfActiveSockets;
+    int _get_connection();
 
     void _serverStdInput();
 

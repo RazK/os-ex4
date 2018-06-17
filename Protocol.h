@@ -8,6 +8,7 @@
 #include <cstdint>
 #include "whatsappio.h"
 
+#define max(a,b) ((a) >= (b) ? (a) : (b))
 
 struct clientWrapper{
     int sock;
@@ -96,6 +97,6 @@ typedef struct _ExitMessage{
 bool isValidName(const std::string& name);
 
 int _readData(int socket, void * buf , size_t n);
-
+int readFromSocket(int socket, std::string &outbuf, int count);
 
 #endif //OSEX4_PROTOCOL_H

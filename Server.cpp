@@ -7,19 +7,38 @@
 
 //#include <fcntl.h>
 #include <unistd.h>
-
+#include <algorithm>
 #include "Server.h"
 #include "Protocol.h"
 
-Server::Server(unsigned short port) {
-    numOfActiveSockets = 10; // 1 socket always listening for new clients // TODO: Determine actual number
+#define NUM_OF_ALWAYS_OPEN_SOCKETS 3 // STDIN, STDOUT, STDERR
 
-    FD_ZERO(&this->clientSocketSet); // Init the set of sockets
+Server::Server(unsigned short port) {
+    FD_ZERO(&this->openSocketsSet); // Init the set of sockets
 
     if (ErrorCode::SUCCESS != this->_establish(port)){
         print_fail_connection();
         exit(-1);
     }
+}
+
+
+int Server::_configFDSets(){
+    int max_fd = STDIN_FILENO;
+
+    // Zero the set of sockets
+    FD_ZERO(&this->openSocketsSet);
+
+    // Init the set of sockets
+    FD_SET(STDIN_FILENO, &this->openSocketsSet);                   // STDIN
+    FD_SET(this->welcomeClientsSocket, &this->openSocketsSet);       // New connections socket
+    max_fd = max(STDIN_FILENO, welcomeClientsSocket);
+    for (auto sock_fd : this->connectedClients) {
+        FD_SET(sock_fd.sock, &this->openSocketsSet);               // Each connection socket
+        max_fd = max(sock_fd.sock, max_fd);
+    }
+
+    return max_fd;
 }
 
 ErrorCode Server::_establish(unsigned short port) {
@@ -29,38 +48,39 @@ ErrorCode Server::_establish(unsigned short port) {
         printf("gethostname failure in server establish connection");
         return ErrorCode::FAIL;
     }
-//    printf("MY HOST NAME: %s \n", myname);
+//    printf("MY HOST NAME: %connectedServer \n", myname);
 
-    this->hp = gethostbyname(myname);
-
-    if (this->hp == nullptr){
+    this->host = gethostbyname(myname);
+    if (this->host == nullptr){
         printf("got nullptr for gethostbyname in server establish connection");
         return ErrorCode::FAIL;
     }
 
     //sockaddrr_in initialization
-    memset(&(this->sa), 0, sizeof(struct sockaddr_in));
-    this->sa.sin_family = this->hp->h_addrtype;
+    memset(&(this->serve_addr), 0, sizeof(struct sockaddr_in));
+    //this->serve_addr.sin_family = this->host->h_addrtype;
+    this->serve_addr.sin_family = AF_INET;
 
     /* this is our host address */
-    memcpy(&this->sa.sin_addr, this->hp->h_addr, this->hp->h_length);
+    //memcpy(&this->serve_addr.sin_addr, this->host->h_addr, this->host->h_length);
+    this->serve_addr.sin_addr.s_addr = INADDR_ANY;
 
     /* this is our port number */
-    this->sa.sin_port = htons(port);
+    this->serve_addr.sin_port = htons(port);
 
     /* create socket */
-    this->serverSocketClient = socket(AF_INET, SOCK_STREAM, 0);
-    if(this->serverSocketClient < 0){
+    this->welcomeClientsSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if(this->welcomeClientsSocket < 0){
         printf("err whilst creating socket in server establish connection");
         return ErrorCode::FAIL;
 
     }
 
     // add that socket to the set for select
-    FD_SET(this->serverSocketClient, &this->clientSocketSet);
-    FD_SET(STDIN_FILENO, &this->clientSocketSet);
+    FD_SET(this->welcomeClientsSocket, &this->openSocketsSet);
+    FD_SET(STDIN_FILENO, &this->openSocketsSet);
 
-    if (bind(this->serverSocketClient , (struct sockaddr *)&(this->sa) , sizeof(struct sockaddr_in)) < 0){
+    if (bind(this->welcomeClientsSocket , (struct sockaddr *)&(this->serve_addr) , sizeof(struct sockaddr_in)) < 0){
         printf("Err in bind");
         return ErrorCode::FAIL;
 
@@ -68,7 +88,7 @@ ErrorCode Server::_establish(unsigned short port) {
 
 
     /* max # of queued connects */
-    if (listen(this->serverSocketClient, maxNumConnected) < 0){
+    if (listen(this->welcomeClientsSocket, maxNumConnected) < 0){
         printf("failed to listen in server establish connection");
         return ErrorCode::FAIL;
     }
@@ -76,16 +96,29 @@ ErrorCode Server::_establish(unsigned short port) {
     return ErrorCode::SUCCESS;
 }
 
-ErrorCode Server::_closeConnection(){
-    close(this->serverSocketClient);
-    return ErrorCode::FAIL;
+ErrorCode Server::_closeConnection(int socket){
+    FD_CLR(socket, &this->openSocketsSet);
+    if (0 != close(socket)){
+        perror("Failed to close socket");
+        return ErrorCode::FAIL;
+    }
+    auto testIfRemove = [socket](clientWrapper cur){return cur.sock == socket;};
+    this->connectedClients.erase(std::remove_if(this->connectedClients.begin(),
+                                                this->connectedClients.end(),
+                                                testIfRemove),
+                                 this->connectedClients.end());
+    return ErrorCode::SUCCESS;
 }
 
 ErrorCode Server::_ParseMessage(const clientWrapper& client)
 {
     auto socket = client.sock;
-    msg_type mtype;
-    ASSERT_READ(socket, &mtype, sizeof(msg_type));
+    msg_type mtype = _command_type::INVALID;
+    if(0 == _readData(socket, &mtype, sizeof(msg_type)))
+    {
+        printf("Read 0 bytes from socket - closed on the other side (client disconnected?)\r\n"); // https://stackoverflow.com/questions/2416944/can-read-function-on-a-connected-socket-return-zero-bytes
+        return this->_closeConnection(socket);
+    }
     switch (mtype)
     {
         case command_type::CREATE_GROUP:
@@ -131,14 +164,16 @@ ErrorCode Server::_ParseMessage(const clientWrapper& client)
 
 ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName){
 
-    char temp[WA_MAX_NAME];
-    bzero(temp, WA_MAX_NAME);
+    //char temp[WA_MAX_NAME];
+    //bzero(temp, WA_MAX_NAME);
+    std::string temp = "";
 
     // Read Name
-    ASSERT_READ(client_sock, &temp, WA_MAX_NAME);
+    //ASSERT_READ(client_sock, &temp, WA_MAX_NAME);
+    readFromSocket(client_sock, temp, WA_MAX_NAME);
 
     // Resize up to '\0'
-    int nameLen = strnlen(temp, WA_MAX_NAME);
+    int nameLen = strnlen(temp.c_str(), WA_MAX_NAME);
     clientName = temp;
     clientName.resize(nameLen);
 
@@ -260,48 +295,46 @@ ErrorCode Server::_HandleExit(const clientWrapper& client)
 }
 
 int Server::_get_connection() {
-//    int t= accept(this->serverSocketClient,NULL, NULL); /* socket of connection */
-    clilen = sizeof(cli_addr);
-    int t = accept(this->serverSocketClient, (struct sockaddr *) &cli_addr, &clilen);
+//    int newConnection= accept(this->welcomeClientsSocket,NULL, NULL); /* socket of connection */
+    int newConnection = accept(this->welcomeClientsSocket, nullptr, nullptr);
 
-    if (t < 0){
+    if (newConnection < 0){
         return -1;
     }
-    return t;
+    return newConnection;
 }
 
 
 ErrorCode Server::_Run() {
-//    struct timeval interval{0, 100};
-    bool stillRunning = true;
-    while (stillRunning){
-        auto readfds = this->clientSocketSet; //TODO: need to make a copy here..
-        if (select(this->numOfActiveSockets+1, &readfds, NULL, NULL, NULL) < 0) {
+    while (true){
+        int max_fd = this->_configFDSets();
+        auto readfds = this->openSocketsSet; //TODO: need to make a copy here..
+        if (select(max_fd+1, &readfds, nullptr, nullptr, nullptr) < 0) {
             print_error("_Run - select", 1);
             exit(-1);
         }
-        if (FD_ISSET(this->serverSocketClient, &readfds)) {
+        if (FD_ISSET(this->welcomeClientsSocket, &readfds)) {
             //will also add the client to the clientsfds
-
             this->_connectNewClient();
+            continue;
         }
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
             this->_serverStdInput();
+            continue;
         }
         else {
-            //will check each client if it’s serverSocketClient in readfds
+            //will check each client if it’connectedServer welcomeClientsSocket in readfds
             //and then receive a message from him
-            for (auto clientIt = this->connectedClients.begin(); clientIt != this->connectedClients.end(); ++clientIt ){
-                if (FD_ISSET(clientIt->sock, &readfds)){
-//                    this->_HandleIncomingMessage(clientIt->sock);
-                    this->_ParseMessage(*clientIt);
+            for (auto client : this->connectedClients){
+                if (FD_ISSET(client.sock, &readfds)){
+//                    this->_HandleIncomingMessage(client->sock);
+                    this->_ParseMessage(client);
                     break;
                 }
             }
+            continue;
         }
     }
-
-    return FAIL;
 }
 
 void Server::_serverStdInput() {
@@ -324,12 +357,10 @@ void Server::_connectNewClient() {
     std::string name;
     ASSERT_SUCCESS(_ParseName(t, name), "Parse name failed in run");
 
-    printf("New Client: %s", name);
+    printf("New Client: %s\r\n", name.c_str());
 
     connectedClients.emplace_back(clientWrapper{t, name});
-    this->numOfActiveSockets ++; //increment the number of clients
-    FD_SET(t, &this->clientSocketSet);
-
+    //FD_SET(t, &this->openSocketsSet);
 }
 
 ErrorCode Server::_HandleIncomingMessage(int socket) {
