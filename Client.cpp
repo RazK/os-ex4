@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include "Client.h"
 #include <fstream>
-//#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/join.hpp>
 
 //Client::Client() {
 //    char * addr{"aqua-81"};
@@ -69,21 +69,34 @@ ErrorCode Client::_ClientStdInput(){
     switch (commandT){
         case command_type::CREATE_GROUP:
         {
-            //std::string clientsJoined = boost::algorithm::join(clients, ',');
-            //this->_RequestCreateGroup(name, clientsJoined);
-            break;
-        }
-        case command_type::EXIT:
-        {
-            break;
+            // Merge clients list into single string
+            if (clients.size() < MIN_NAMES_IN_GROUP){
+                return ErrorCode::FAIL;
+            }
+            std::string clientsJoined = "";
+            for (auto client : clients){
+                clientsJoined.append(client);
+                clientsJoined.append(",");
+            }
+            clientsJoined.pop_back();
+
+            // Send protocol CREATE_GROUP message
+            return this->_RequestCreateGroup(name, clientsJoined);
         }
         case command_type::SEND:
         {
-            break;
+            // Send protocol SEND_MESSAGE message
+            return this->_RequestSendMessage(name, message);
+        }
+        case command_type::EXIT:
+        {
+            // Send protocol EXIST message
+            return this->_RequestExist();
         }
         case command_type::WHO:
         {
-            break;
+            // Send protocol WHO message
+            return this->_RequestWho();
         }
         default:
         {
@@ -93,7 +106,20 @@ ErrorCode Client::_ClientStdInput(){
 }
 
 ErrorCode Client::_ParseMessageFromServer(){
-    return ErrorCode::NOT_IMPLEMENTED;
+    char message[WA_MAX_MESSAGE+1];
+    bzero(message, WA_MAX_MESSAGE+1);
+    int read = _readData(this->connectedServer, message, WA_MAX_MESSAGE);
+    if (read == 0){
+        printf("Server disconnected unexpectedly.\r\n");
+        return ErrorCode::FAIL;
+    }
+    else if (read != WA_MAX_MESSAGE){
+        printf("Read from server socket failed.\r\n");
+        exit(-1);
+    }
+
+    printf("%s\r\n", message);
+    return ErrorCode::SUCCESS;
 }
 
 ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
@@ -116,7 +142,7 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
 
     if (connect(this->connectedServer, (struct sockaddr *)&this->serv_addr , sizeof(this->serv_addr)) < 0) {
         close(this->connectedServer);
-        printf("client failed in connect\n");
+        printf("Failed to connect to server. (Is server running? Correct address and port?)\n\r");
 
         return ErrorCode::FAIL;
     }
@@ -265,11 +291,9 @@ Client::Client(const std::string clientName, const std::string serverAddress, co
     this->name = clientName;
 
     if (ErrorCode::SUCCESS != this->_callSocket(serverAddress.c_str(), serverPort)){
-        printf("Err in socket calling\n");
-        return;
+        printf("Client failed to open socket with the server.\n");
+        exit(-1);
     }
-
-
 }
 
 int main(int argc, char const *argv[]){

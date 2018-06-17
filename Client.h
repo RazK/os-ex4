@@ -77,11 +77,7 @@ public: // TODO: Raz: Resume private after done debugging
 
     int _configFDSets();
 
-    bool _uniqueName(std::string newName) const;
-
     ErrorCode _callSocket(const char *hostname, unsigned short port);
-
-    int _readData(int n);
 };
 
 #endif //OSEX4_CLIENT_H

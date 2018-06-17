@@ -8,6 +8,8 @@
 #include <cstdint>
 #include "whatsappio.h"
 
+#define MIN_NAMES_IN_GROUP 2
+
 int max(int a, int b);
 
 struct clientWrapper{

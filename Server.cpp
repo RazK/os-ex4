@@ -79,7 +79,7 @@ ErrorCode Server::_establish(unsigned short port) {
     FD_SET(STDIN_FILENO, &this->openSocketsSet);
 
     if (bind(this->welcomeClientsSocket , (struct sockaddr *)&(this->serve_addr) , sizeof(struct sockaddr_in)) < 0){
-        printf("Err in bind");
+        printf("Error in bind. Socket in use or not properly closed?\r\n");
         return ErrorCode::FAIL;
 
     }
@@ -280,6 +280,8 @@ ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
     std::sort(this->connectedClients.begin(), this->connectedClients.end(), compareClientWrapper);
 
     // logic for valid group member list
+    // TODO: Shimmy: this seems to reject valid groups, separate giant condition to several so
+    // debuggable
     bool valid = (isValidName(groupName) &&                         // legal group name
         (! groupMembers.empty()) &&                                 // non empty member set
         (groupMembers.size() <= WA_MAX_GROUP) &&                    // group not too big
@@ -336,7 +338,8 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
     for (auto &connectedClient : this->connectedClients) {
         allNames += connectedClient.name + ",";
     }
-    allNames = allNames.substr(allNames.length() -1);
+    allNames.pop_back();
+    allNames.resize(WA_MAX_MESSAGE, 0);
 
     ASSERT_WRITE(client.sock, allNames.c_str(), allNames.length());
 
