@@ -11,8 +11,6 @@
 #include "Server.h"
 #include "Protocol.h"
 
-#define NUM_OF_ALWAYS_OPEN_SOCKETS 3 // STDIN, STDOUT, STDERR
-
 Server::Server(unsigned short port) {
     FD_ZERO(&this->openSocketsSet); // Init the set of sockets
 
@@ -48,7 +46,7 @@ ErrorCode Server::_establish(unsigned short port) {
         printf("gethostname failure in server establish connection");
         return ErrorCode::FAIL;
     }
-//    printf("MY HOST NAME: %connectedServer \n", myname);
+//    printf("MY HOST NAME: %s \n", myname);
 
     this->host = gethostbyname(myname);
     if (this->host == nullptr){
@@ -170,6 +168,7 @@ ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName)
 
     // Read Name
     //ASSERT_READ(client_sock, &temp, WA_MAX_NAME);
+    // TODO: check retval
     readFromSocket(client_sock, temp, WA_MAX_NAME);
 
     // Resize up to '\0'
@@ -256,22 +255,76 @@ ErrorCode Server::_ParseSendMessage(const clientWrapper& client,
     return ErrorCode::SUCCESS;
 }
 
+bool compareClientWrapper(const clientWrapper& cw1, const clientWrapper& cw2){
+    return cw1.name < cw2.name;
+}
+
 ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
                                      const std::string& groupName,
                                      const std::string& listOfClientNames)
 {
-    std::cout << "Server::_HandleCreateGroup\ngroupName : '"<< groupName << "'\nclientsList : '" <<
-                                                                                          listOfClientNames << "'\n\r" << std::endl;
-    return ErrorCode::NOT_IMPLEMENTED;
+    // emplace in groupmembers the results of parsing the list of clients
+    std::vector<std::string> groupMembers;
+    split(listOfClientNames, ',', groupMembers);
+
+    // add the calling client to group, just in case not in it.
+    groupMembers.emplace_back(client.name);
+
+    // make unique and clip
+    std::sort(groupMembers.begin(), groupMembers.end());
+    auto it = std::unique(groupMembers.begin(), groupMembers.end());
+    groupMembers.resize((unsigned long)std::distance(groupMembers.begin(), it));
+
+    //also sort the list of clients this server has connected to, for good measure and runtime
+    std::sort(this->connectedClients.begin(), this->connectedClients.end(), compareClientWrapper);
+
+    // logic for valid group member list
+    bool valid = (isValidName(groupName) &&                         // legal group name
+        (! groupMembers.empty()) &&                                 // non empty member set
+        (groupMembers.size() <= WA_MAX_GROUP) &&                    // group not too big
+        (groupMembers != std::vector<std::string>{client.name}) &&  // group isn't singleton creator
+        (this->groups.count(groupName) == 0 ) &&                    // unique group name
+        (this->_isClientList(groupMembers)) &&                      // All are clients
+        (!this->_isClient(groupName))                               // This group name not in use as client name
+    );
+
+
+    if (valid){
+        std::vector<clientWrapper> wrappedGroup;
+        for (const auto &name : groupMembers) {
+            wrappedGroup.emplace_back(this->_getClient(name));
+        }
+        this->groups.emplace(std::pair<std::string, std::vector<clientWrapper>>(groupName, wrappedGroup)); //TODO: maybe should clientWrapper rather than string?
+    }
+
+    print_create_group(true, valid, client.name, listOfClientNames);
+
+    //TODO: force response in client side
+    return ErrorCode::SUCCESS; //invalid does not mean not success
 }
 
 ErrorCode Server::_HandleSendMessage(const clientWrapper& client,
                                      const std::string& targetName,
                                      const std::string& message)
 {
-    std::cout << "Server::_HandleSendMessage\ntarget : '" << targetName << "'\nmessage : '" <<
-              message << "'\n\r" << std::endl;
-    return ErrorCode::NOT_IMPLEMENTED;
+    bool valid = (
+            isValidName(client.name) &&                     // client is legal name -- superfluous
+            _isClient(client.name) &&                       // client is recognized -- superfluous
+            isValidName(targetName) &&                      // target has legal name
+            _isClient(targetName)                           // client is recognized
+                                                            // TODO: valid message?
+    );
+
+    if (valid){
+        auto targetClientW = this->_getClient(targetName);
+        ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
+            //TODO: flush message to the target using the targetClientW
+    }
+
+    print_send(true, valid, client.name, targetName, message);
+    //TODO: force response in client side
+
+    return ErrorCode::SUCCESS; //invalid does not mean not success
 }
 
 ErrorCode Server::_HandleWho(const clientWrapper & client)
@@ -291,10 +344,43 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
 
 ErrorCode Server::_HandleExit(const clientWrapper& client)
 {
+    bool legal = (this->_isClient(client.name));            // reality check.. should be true if no bug
+
+
+    if (legal){
+        auto iter = this->connectedClients.begin();
+        for (iter ; iter != this->connectedClients.end(); ++iter) {
+            if ((*iter).name == client.name){
+                break;
+            }
+        }
+        ASSERT(iter != this->connectedClients.end(), "Got unexpected iter in handle exit");
+        this->connectedClients.erase(iter);               // rm from clients
+        for (auto &group : this->groups){
+            auto iter2 = group.second.begin();    // iterate over group name vector (in second)
+            for (iter2 ; iter2 != group.second.end(); ++iter2) {
+                if ((*iter2).name == client.name){
+                    break;
+                }
+                // Here, iter2 may be .end because we cant be sure if client in group
+            }
+
+            if (iter2 != group.second.end()){
+                group.second.erase(iter2);                // rm from group
+            }
+            if (group.second.size() == 1){                  // last one in a group is a rotten egg
+                // todo: is a group of only one member considered valid after erasing?
+            }
+            if (group.second.empty()){                  // empty group is super rotten
+                groups.erase(group.first);
+            }
+
+        }
+    }
     return ErrorCode::NOT_IMPLEMENTED;
 }
 
-int Server::_get_connection() {
+int Server::_getConnection() {
 //    int newConnection= accept(this->welcomeClientsSocket,NULL, NULL); /* socket of connection */
     int newConnection = accept(this->welcomeClientsSocket, nullptr, nullptr);
 
@@ -315,7 +401,7 @@ ErrorCode Server::_Run() {
         }
         if (FD_ISSET(this->welcomeClientsSocket, &readfds)) {
             //will also add the client to the clientsfds
-            this->_connectNewClient();
+            this->_HandleNewClient();
             continue;
         }
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
@@ -323,7 +409,7 @@ ErrorCode Server::_Run() {
             continue;
         }
         else {
-            //will check each client if it’connectedServer welcomeClientsSocket in readfds
+            //will check each client if it’s serverSocketClient in readfds
             //and then receive a message from him
             for (auto client : this->connectedClients){
                 if (FD_ISSET(client.sock, &readfds)){
@@ -342,30 +428,78 @@ void Server::_serverStdInput() {
     std::getline (std::cin, command);
     if (command == (SERVER_INPUT_EXIT)){
         print_exit();
+        for (const auto &connectedClient : this->connectedClients) {
+            //todo: for connectedClient to exit(1)
+        }
         //TODO: exit gracefully... not like a baffoon
         exit(0);
     }
 
 }
 
-void Server::_connectNewClient() {
-    auto t = _get_connection();
+void Server::_HandleNewClient() {
+    auto t = _getConnection();
     if (t < 0){
         print_error("_Run - connectNewClient", 2);
         exit(-1);
     }
     std::string name;
-    ASSERT_SUCCESS(_ParseName(t, name), "Parse name failed in run");
+    ASSERT_SUCCESS(_ParseName(t, name), "Parse name failed in _Run");
 
     printf("New Client: %s\r\n", name.c_str());
 
-    connectedClients.emplace_back(clientWrapper{t, name});
-    //FD_SET(t, &this->openSocketsSet);
+    if (!(this->_isGroup(name) || this->_isClient(name))){
+        connectedClients.emplace_back(clientWrapper{t, name});
+        print_connection_server(name); // successful
+        // todo: force client to print connection
+    } else {  // this name is already in use
+        //todo: force client to call print_dup_connection and exit
+        //todo: who?
+    }
+
+
+
+}
+
+bool Server::_isClient(const std::string& name) const{
+    for (const auto &connectedClient : this->connectedClients) {
+        if (connectedClient.name == name){ // found client that matches
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Server::_isClientList(const std::vector<std::string>& names) const{
+    for (const auto &name : names) {
+        if (!this->_isClient(name)){ // found client that matches
+            return false;
+        }
+    }
+    return true;
+}
+
+const clientWrapper Server::_getClient(const std::string &name) const{
+    for (const auto &client : this->connectedClients) {
+        if (client.name == name){
+            return client;
+        }
+    }
+    return clientWrapper{-1, ""};
 }
 
 ErrorCode Server::_HandleIncomingMessage(int socket) {
 //    _ParseMessage(socket);
     return FAIL;
+}
+
+bool Server::_isGroup(const std::string &name) const {
+    for (const auto &group : this->groups) {
+        if (group.first == name){
+            return true;
+        }
+    }
+    return false;
 }
 
 

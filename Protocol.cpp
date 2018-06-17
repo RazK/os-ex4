@@ -4,7 +4,7 @@
 
 #include "Protocol.h"
 #include <unistd.h>
-
+#include <sstream>
 
 
 bool isValidName(const std::string& name){
@@ -13,6 +13,26 @@ bool isValidName(const std::string& name){
         if (!(('0' <= curr && curr <= '9') ||
               ('a' <= curr && curr <= 'z') ||
               ('A' <= curr && curr <= 'Z'))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void split(const std::string& string,
+           const char& delim,
+           std::vector<std::string> result/*OUT */ ){
+    std::string token;
+    std::istringstream tokenStream(string);
+    while(std::getline(tokenStream, token, delim)){
+        result.push_back(token);
+    }
+}
+
+bool isValidList(const std::vector<std::string>& names){
+
+    for (auto iter = names.begin(); iter != names.end(); ++iter){
+        if (! isValidName(*iter)){ //found invalid name
             return false;
         }
     }

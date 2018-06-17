@@ -15,11 +15,17 @@
 #include <climits>                  // max of unsigned short
 
 #include <sys/select.h>             // set and select
-
+#include <map>
 
 
 #include "whatsappio.h"
 #include "ErrorCode.h"
+#include "Protocol.h"
+
+
+#include <unistd.h>
+#include <algorithm>
+
 #include "Protocol.h"
 
 const int maxNumConnected = 10;
@@ -38,11 +44,6 @@ public:
 
 private:
     // fields
-//    int socketfd, newsockfd, port;
-//    socklen_t clilen;
-//    char buffer[256];
-//
-//    struct sockaddr_in serv_addr, cli_addr;
 
     char myname[WA_MAX_NAME + 1];
     int welcomeClientsSocket;
@@ -50,7 +51,7 @@ private:
 //    fd_set * writeSocketSet;
 //    fd_set * excptSocketSet;
 
-
+    std::map <std::string , std::vector <clientWrapper> > groups;
     struct sockaddr_in serve_addr;
     struct hostent *host;
 
@@ -90,13 +91,33 @@ public:
 
     int _configFDSets();
 
-    int _get_connection();
+    int _getConnection();
 
     void _serverStdInput();
 
-    void _connectNewClient();
+    void _HandleNewClient();
+
+    /*
+    * Description: Return if name is a group this server has initiated.
+    */
+    bool _isGroup(const std::string& name) const;
+    /*
+     * Description: Return if name is a client this server has connected to.
+    */
+    bool _isClient(const std::string& name) const;
+
+    /*
+     * Description: Return if given list of names is recognized as connected clients in its entirety
+     */
+    bool _isClientList(const std::vector<std::string>& names) const;
+
+    /*
+    *  Description: Return the wrapper object that fits this name, if exists. null is doesnt.
+    */
+    const clientWrapper _getClient(const std::string &name) const;
 
     void _handleClientRequest();
+
 };
 
 #endif //OSEX4_SERVER_H

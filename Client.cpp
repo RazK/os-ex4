@@ -15,10 +15,10 @@
 //        printf("Err in socket calling\n");
 //        return ;
 //    }
-//    write(this->connectedServer, "finally, a message", 100);
+//    write(this->s, "finally, a message", 100);
 //    this->_readData(1024);
 //
-//    printf("Client read: %welcomeClientsSocket", this->buf);
+//    printf("Client read: %serverSocketClient", this->buf);
 //
 //    // TODO: REMOVE THESE LINES
 //    this->_sock_fd = open("/cs/+/usr/razkarl/os-ex4/client_test.txt", O_CREAT | O_RDWR | O_NONBLOCK);
@@ -181,7 +181,7 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     // Validate arguments
     // Assert valid name
     ASSERT(isValidName(targetName), ("Attempted to send message to target with invalid "
-            "characters %connectedServer",
+            "characters %s",
             targetName));
     ASSERT((0 <= targetName.length() &&
             targetName.length() <= WA_MAX_NAME), "Invalid target name length");
@@ -268,6 +268,8 @@ Client::Client(const std::string clientName, const std::string serverAddress, co
         printf("Err in socket calling\n");
         return;
     }
+
+
 }
 
 int main(int argc, char const *argv[]){
