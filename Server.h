@@ -28,6 +28,7 @@
 
 #include "Protocol.h"
 
+
 const int maxNumConnected = 10;
 
 #define SERVER_INPUT_EXIT "EXIT"
@@ -40,7 +41,7 @@ public:
 
     explicit Server(unsigned short port);
 
-    ~Server() = default;
+    ~Server();
 
 private:
     // fields
@@ -97,6 +98,8 @@ public:
 
     void _HandleNewClient();
 
+    void _cleanUp();
+
     /*
     * Description: Return if name is a group this server has initiated.
     */
@@ -116,7 +119,7 @@ public:
     */
     const clientWrapper _getClient(const std::string &name) const;
 
-    void _handleClientRequest();
+//    void _handleClientRequest();
 
 };
 

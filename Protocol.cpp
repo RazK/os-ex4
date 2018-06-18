@@ -3,8 +3,6 @@
 //
 
 #include "Protocol.h"
-#include <unistd.h>
-#include <sstream>
 
 int max(int a, int b){
     return ((a) >= (b) ? (a) : (b));
@@ -19,16 +17,37 @@ bool isValidName(const std::string& name){
             return false;
         }
     }
-    return true;
+    // at least 1 letter...
+    return (0 < name.length() && name.length() <= WA_MAX_NAME);
+}
+
+std::string getResponse(TaskCase taskCase){
+    if (taskCase == TaskCase::SUCCEEDED){
+        return TASK_SUCCESSFUL;
+    }
+    if (taskCase == TaskCase::FAILED){
+        return TASK_FAILURE;
+    }
+    if (taskCase == TaskCase::BUGGED){
+        return TASK_BUG;
+    }
+    return TASK_UNDEFINED;
+}
+
+TaskCase bool2TCase(bool valid){
+    if (valid){
+        return TaskCase::SUCCEEDED;
+    }
+    return TaskCase::FAILED;
 }
 
 void split(const std::string& string,
            const char& delim,
-           std::vector<std::string> result/*OUT */ ){
+           std::vector<std::string>& result /*OUT */ ){
     std::string token;
     std::istringstream tokenStream(string);
     while(std::getline(tokenStream, token, delim)){
-        result.push_back(token);
+        result.emplace_back(token);
     }
 }
 
@@ -43,6 +62,7 @@ bool isValidList(const std::vector<std::string>& names){
 }
 
 int _readData(int socket, void * buf , size_t n){
+    buf = (char *) buf;
     int bcount;
     /* counts bytes read */
     ssize_t br;
@@ -84,4 +104,12 @@ int readFromSocket(int socket, std::string &outbuf, int count){
         }
     }
     return (bcount);
+}
+
+std::string padMessage(std::string string, int resultSize) {
+    auto len = string.length();
+    for (int _ = 0; _ < resultSize - len; ++_ ){
+        string += PAD;
+    }
+    return string;
 }

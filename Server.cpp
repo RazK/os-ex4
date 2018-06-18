@@ -2,14 +2,9 @@
 // Created by heimy4prez on 6/16/18.
 //
 //
-// Created by heimy4prez on 6/16/18.
-//
 
-//#include <fcntl.h>
-#include <unistd.h>
-#include <algorithm>
+
 #include "Server.h"
-#include "Protocol.h"
 
 Server::Server(unsigned short port) {
     FD_ZERO(&this->openSocketsSet); // Init the set of sockets
@@ -165,7 +160,7 @@ ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName)
 
     //char temp[WA_MAX_NAME];
     //bzero(temp, WA_MAX_NAME);
-    std::string temp = "";
+    std::string temp;  // = "" is redundant
 
     // Read Name
     //ASSERT_READ(client_sock, &temp, WA_MAX_NAME);
@@ -178,7 +173,7 @@ ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName)
     clientName.resize(nameLen);
 
     // Assert name is legal
-    ASSERT(isValidName(clientName), "Invalid client name characters");
+    ASSERT(isValidName(clientName), "BUG: Invalid client name found in server - client must catch this first");
 
     return ErrorCode::SUCCESS;
 }
@@ -241,7 +236,7 @@ ErrorCode Server::_ParseSendMessage(const clientWrapper& client,
     ASSERT(isValidName(targetName), "Invalid target name characters");
 
     // Parse message length
-    ASSERT_READ(client.sock, &messageLen, sizeof(message_len));
+//    ASSERT_READ(client.sock, &message, sizeof(message_len));
     messageLen = ntohs(messageLen);
 
     // Assert length is legal
@@ -300,9 +295,12 @@ ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
         this->groups.emplace(std::pair<std::string, std::vector<clientWrapper>>(groupName, wrappedGroup)); //TODO: maybe should clientWrapper rather than string?
     }
 
-    print_create_group(true, valid, client.name, listOfClientNames);
+    print_create_group(true, valid, client.name, groupName);
 
-    //TODO: force response in client side
+    auto response = getResponse(bool2TCase(valid));
+
+    ASSERT_WRITE(client.sock, response.c_str(), TASK_RESP_SIZE);
+
     return ErrorCode::SUCCESS; //invalid does not mean not success
 }
 
@@ -311,21 +309,36 @@ ErrorCode Server::_HandleSendMessage(const clientWrapper& client,
                                      const std::string& message)
 {
     bool valid = (
-            isValidName(client.name) &&                     // client is legal name -- superfluous
-            _isClient(client.name) &&                       // client is recognized -- superfluous
-            isValidName(targetName) &&                      // target has legal name
-            _isClient(targetName)                           // client is recognized
-                                                            // TODO: valid message?
+            isValidName(client.name) &&                         // client is legal name -- superfluous
+            _isClient(client.name) &&                           // client is recognized -- superfluous
+            isValidName(targetName) &&                          // target has legal name
+            (_isClient(targetName) || _isGroup(targetName)) &&  // client is recognized
+            !message.empty()                                    // non empty message
+                                                                // TODO: valid message?
     );
 
     if (valid){
-        auto targetClientW = this->_getClient(targetName);
-        ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
-            //TODO: flush message to the target using the targetClientW
+
+//        auto fullMessage = padMessage(client.name, WA_MAX_NAME) + ":\n" + padMessage(message, WA_MAX_MESSAGE);
+        if (_isGroup(targetName)){
+            //TODO: write some function that sends to whole group
+        } else {
+            auto targetClientW = this->_getClient(targetName);
+            ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
+            auto temp = client.name + ":";
+            temp.resize(WA_MAX_MESSAGE, 0);
+            ASSERT_WRITE(targetClientW.sock, temp.c_str(), temp.length());
+            temp = message;
+            temp.resize(WA_MAX_MESSAGE, 0);
+            ASSERT_WRITE(targetClientW.sock, temp.c_str(), temp.length());
+        }
     }
 
     print_send(true, valid, client.name, targetName, message);
-    //TODO: force response in client side
+
+    auto response = getResponse(bool2TCase(valid));
+
+    ASSERT_WRITE(client.sock, response.c_str(), TASK_RESP_SIZE);
 
     return ErrorCode::SUCCESS; //invalid does not mean not success
 }
@@ -333,6 +346,9 @@ ErrorCode Server::_HandleSendMessage(const clientWrapper& client,
 ErrorCode Server::_HandleWho(const clientWrapper & client)
 {
     print_who_server(client.name);
+
+    // prints are expected sorted
+    std::sort(this->connectedClients.begin(), this->connectedClients.end(), compareClientWrapper);
 
     std::string allNames;
     for (auto &connectedClient : this->connectedClients) {
@@ -349,7 +365,7 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
 ErrorCode Server::_HandleExit(const clientWrapper& client)
 {
     bool legal = (this->_isClient(client.name));            // reality check.. should be true if no bug
-
+    print_exit(true, client.name);
 
     if (legal){
         auto iter = this->connectedClients.begin();
@@ -378,10 +394,10 @@ ErrorCode Server::_HandleExit(const clientWrapper& client)
             if (group.second.empty()){                  // empty group is super rotten
                 groups.erase(group.first);
             }
-
         }
+        return ErrorCode::SUCCESS;
     }
-    return ErrorCode::NOT_IMPLEMENTED;
+    return ErrorCode::BUG;
 }
 
 int Server::_getConnection() {
@@ -398,7 +414,7 @@ int Server::_getConnection() {
 ErrorCode Server::_Run() {
     while (true){
         int max_fd = this->_configFDSets();
-        auto readfds = this->openSocketsSet; //TODO: need to make a copy here..
+        auto readfds = this->openSocketsSet;
         if (select(max_fd+1, &readfds, nullptr, nullptr, nullptr) < 0) {
             print_error("_Run - select", 1);
             exit(-1);
@@ -432,13 +448,20 @@ void Server::_serverStdInput() {
     std::getline (std::cin, command);
     if (command == (SERVER_INPUT_EXIT)){
         print_exit();
-        for (const auto &connectedClient : this->connectedClients) {
-            //todo: for connectedClient to exit(1)
-        }
-        //TODO: exit gracefully... not like a baffoon
+        this->_cleanUp();
+        //todo: for connectedClient to exit(1)
         exit(0);
+    } else {
+        print_invalid_input();
     }
 
+}
+
+void Server::_cleanUp(){
+    for (const auto &connectedClient : this->connectedClients) {
+        close(connectedClient.sock);
+    }
+    close(this->welcomeClientsSocket);
 }
 
 void Server::_HandleNewClient() {
@@ -450,15 +473,17 @@ void Server::_HandleNewClient() {
     std::string name;
     ASSERT_SUCCESS(_ParseName(t, name), "Parse name failed in _Run");
 
-    printf("New Client: %s\r\n", name.c_str());
+//    printf("New Client: %s\r\n", name.c_str());
 
     if (!(this->_isGroup(name) || this->_isClient(name))){
         connectedClients.emplace_back(clientWrapper{t, name});
         print_connection_server(name); // successful
+        ASSERT_WRITE(t, TASK_SUCCESSFUL, TASK_RESP_SIZE);
+
         // todo: force client to print connection
     } else {  // this name is already in use
+        ASSERT_WRITE(t, TASK_FAILURE, TASK_RESP_SIZE);
         //todo: force client to call print_dup_connection and exit
-        //todo: who?
     }
 
 
@@ -494,8 +519,8 @@ const clientWrapper Server::_getClient(const std::string &name) const{
 
 ErrorCode Server::_HandleIncomingMessage(int socket) {
 //    _ParseMessage(socket);
-    return FAIL;
-}
+    return ErrorCode::FAIL;
+} //todo: deprecated
 
 bool Server::_isGroup(const std::string &name) const {
     for (const auto &group : this->groups) {
@@ -504,6 +529,11 @@ bool Server::_isGroup(const std::string &name) const {
         }
     }
     return false;
+}
+
+Server::~Server() {
+    _cleanUp();
+
 }
 
 
@@ -523,6 +553,7 @@ int main(int argc, char const *argv[]){
         exit(-1);
     }
     Server server{(unsigned short)port};
+    print_connection();
     server._Run();
 
 }

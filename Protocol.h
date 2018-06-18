@@ -7,10 +7,24 @@
 
 #include <cstdint>
 #include "whatsappio.h"
+#include <unistd.h>
+#include <sstream>
 
-#define MIN_NAMES_IN_GROUP 2
+#define TASK_SUCCESSFUL  ("SUCC")
+#define TASK_FAILURE     ("FAIL")
+#define TASK_BUG         ("BUGG")
+#define TASK_UNDEFINED   ("UNDF")
+#define TASK_RESP_SIZE   (4)
+
+const char PAD = '#';
 
 int max(int a, int b);
+
+typedef enum _TaskCase{
+    FAILED = -1,
+    SUCCEEDED = 0,
+    BUGGED = 2
+} TaskCase;
 
 struct clientWrapper{
     int sock;
@@ -34,12 +48,12 @@ typedef const char* client_names;
 
 typedef struct _CreateGroupMessage{
     msg_type mtype = command_type::CREATE_GROUP;
-    name_len nameLen;
-    group_name groupName;
-    clients_len clientsLen;
-    client_names clientNames;
+    name_len nameLen{};
+    group_name groupName{};
+    clients_len clientsLen{};
+    client_names clientNames{};
 
-    _CreateGroupMessage(){}
+    _CreateGroupMessage() = default;
 
     _CreateGroupMessage(name_len nameLen,
     group_name groupName,
@@ -63,10 +77,10 @@ typedef const char* message;
 
 typedef struct _SendMessage{
     msg_type mtype = command_type::SEND;
-    name_len nameLen;
-    target_name targetName;
-    message_len messageLen;
-    message msg;
+    name_len nameLen{};
+    target_name targetName{};
+    message_len messageLen{};
+    message msg{};
 } SendMessage;
 
 
@@ -95,7 +109,11 @@ typedef struct _ExitMessage{
     msg_type mtype = command_type::EXIT;
 } ExitMessage;
 
-
+/* Returns if name is legal:
+ *  1. all alphanumeric
+ *  2. length of at least 1
+ *  3. doesnt exceed max length (30)
+ *  */
 bool isValidName(const std::string& name);
 
 int _readData(int socket, void * buf , size_t n);
@@ -103,9 +121,14 @@ int readFromSocket(int socket, std::string &outbuf, int count);
 
 void split(const std::string& string,
            const char& delim,
-           std::vector<std::string> result/*OUT */ );
+           std::vector<std::string>& result/*OUT */ );
 
 bool isValidList(const std::vector<std::string>& names);
+
+std::string padMessage(std::string string, int resultSize);
+
+std::string getResponse(TaskCase taskCase);
+TaskCase bool2TCase(bool valid);
 
 
 #endif //OSEX4_PROTOCOL_H

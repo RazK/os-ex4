@@ -1,23 +1,30 @@
 #include <iostream>
-#include "whatsappio.h"
-#include "Protocol.h"
-#include "Client.h"
-#include "Server.h"
+//#include "whatsappio.h"
+//#include "Protocol.h"
+//#include "Client.h"
+//#include "Server.h"
+
+void foo(){
+}
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
-    std::cout << "sizeof enum = " << sizeof(command_type) << std::endl;
-    std::cout << "sizeof create_group_message = " << sizeof(CreateGroupMessage) << std::endl;
-    std::cout << "create_group_message.msg_type = " << (char)(CreateGroupMessage().mtype + '0') <<
-                                                                                       std::endl;
-    std::cout << "who.msg_type = " << (char)(WhoMessage().mtype + '0') <<
-              std::endl;
+//    std::cout << "sizeof enum = " << sizeof(command_type) << std::endl;
+//    std::cout << "sizeof create_group_message = " << sizeof(CreateGroupMessage) << std::endl;
+//    std::cout << "create_group_message.msg_type = " << (char)(CreateGroupMessage().mtype + '0') <<
+//                                                                                       std::endl;
+//    std::cout << "who.msg_type = " << (char)(WhoMessage().mtype + '0') <<
+//              std::endl;
+
+
+//    std::cout << "void == NULL: " << (foo() == nullptr) << std::endl;
+
 
     //Client testClient;
     //testClient._RequestCreateGroup("abcdef", "cyber,raz,shimmy");
     //testClient._RequestSendMessage("raz", "hey malord I'm your slave");
     //testClient._RequestWho();
-    //testClient._RequestExist();
+    //testClient._RequestExit();
 
     //Server testServer;
     //testServer._ParseMessage(testServer._send_fd);

@@ -55,6 +55,9 @@
 //}
 Client::~Client() {}
 
+/* wrapper for short circuit protection against undefined behavior - removes last comma <,> in string */
+bool removeLastComma(std::string& str){ str.pop_back(); return true;}
+
 ErrorCode Client::_ClientStdInput(){
     // Read until \n from STDIN
     std::string command;
@@ -71,29 +74,60 @@ ErrorCode Client::_ClientStdInput(){
     switch (commandT){
         case command_type::CREATE_GROUP:
         {
+            const auto &groupName = name;                           // reference for clarity
+
+            // sort clients and make unique - to make sure really is within legal bounds (repeating names?)
+            std::sort(clients.begin(), clients.end());
+            auto it = std::unique(clients.begin(), clients.end());
+            clients.resize((unsigned long)std::distance(clients.begin(), it));
+
+            // Organize all validity term client can recognize under one bool value - valid
+            auto valid = (  (groupName != this->name) &&            // group name is unique from my name
+                            (!clients.empty()) &&                   // group has at least 1 member (may be me...)
+                            (clients.size() <= WA_MAX_GROUP)        // group length doesnt exceed max (50)
+                            );
+
             // Merge clients list into single string
-            if (clients.size() < MIN_NAMES_IN_GROUP){
-                return ErrorCode::FAIL;
-            }
-            std::string clientsJoined = "";
-            for (auto client : clients){
+            std::string clientsJoined;
+            for (const auto &client : clients){
+                valid =     (isValidName(client) &&                         //legal name by alphanumeric and length
+                            (client != groupName) &&                        //This member-client's name isn't group name
+                            (client != this->name || clients.size() > 1) && //If this client in list then list is at least 2 long
+                            (valid));                                       //Don't erase validity so far for all members
                 clientsJoined.append(client);
                 clientsJoined.append(",");
             }
-            clientsJoined.pop_back();
 
-            // Send protocol CREATE_GROUP message
-            return this->_RequestCreateGroup(name, clientsJoined);
+            valid = ( valid &&                                                          // short circuit
+                    (removeLastComma(clientsJoined)) &&                                 // see func docs
+                    (ErrorCode::SUCCESS == _RequestCreateGroup(name, clientsJoined)) && // succeeded to request
+                    (ErrorCode::SUCCESS == this->_readTaskResponse())                   // got back positive response
+            );
+
+            print_create_group(false, valid, this->name, groupName);
+            return ErrorCode::SUCCESS;
         }
+
         case command_type::SEND:
         {
             // Send protocol SEND_MESSAGE message
-            return this->_RequestSendMessage(name, message);
+            auto valid =  (ErrorCode::SUCCESS == this->_RequestSendMessage(name, message) &&
+                            ErrorCode::SUCCESS == this->_readTaskResponse()
+                    );
+            print_send(false, valid, this->name, name, message);
+            return ErrorCode::SUCCESS;
         }
         case command_type::EXIT:
         {
-            // Send protocol EXIST message
-            return this->_RequestExist();
+            // Send protocol EXIT message
+            auto errCode = this->_RequestExit();
+            this->_cleanUp();
+            print_exit(false, this->name);
+            auto exitCode = 0;
+            if (errCode != ErrorCode::SUCCESS){
+                exitCode = 1;
+            }
+            exit(exitCode);
         }
         case command_type::WHO:
         {
@@ -102,6 +136,7 @@ ErrorCode Client::_ClientStdInput(){
         }
         default:
         {
+            print_invalid_input();
             return ErrorCode::FAIL;
         }
     }
@@ -113,6 +148,7 @@ ErrorCode Client::_ParseMessageFromServer(){
     int read = _readData(this->connectedServer, message, WA_MAX_MESSAGE);
     if (read == 0){
         printf("Server disconnected unexpectedly.\r\n");
+        exit(1);
         return ErrorCode::FAIL;
     }
     else if (read != WA_MAX_MESSAGE){
@@ -148,12 +184,39 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
 
         return ErrorCode::FAIL;
     }
-    print_connection();
 
     ASSERT_SUCCESS(_TellName(this->name), "Failed in tellname in connection");
-    return ErrorCode::SUCCESS;
+
+    auto responseCode = this->_readTaskResponse();
+    if (responseCode == ErrorCode::SUCCESS){
+        print_connection();
+    }
+    else if (responseCode == ErrorCode::FAIL){
+        print_fail_connection();
+        exit(1);
+    }
+    ASSERT_SUCCESS(responseCode, ("Bug: Client got unexpected response from server while connecting."));
+    return responseCode;
 }
 
+
+ErrorCode Client::_readTaskResponse() const{
+    char response [TASK_RESP_SIZE];
+    bzero(response, TASK_RESP_SIZE);
+    _readData(this->connectedServer, &response, TASK_RESP_SIZE);
+//    ASSERT_READ(this->connectedServer, response, TASK_RESP_SIZE);
+
+    std::string temp {response};
+
+    if (TASK_SUCCESSFUL == temp){
+        return ErrorCode::SUCCESS;
+    }
+    else if (TASK_FAILURE == temp){
+        return ErrorCode::FAIL;
+    }
+    return ErrorCode::BUG;
+
+}
 
 
 
@@ -176,12 +239,7 @@ ErrorCode Client::_TellName(const std::string& myName){
 ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
                                       const std::string& listOfClientNames)
 {
-    // Validate arguments
-    // Assert valid name
-    ASSERT(isValidName(groupName), ("Attempted to create group with invalid characters %s",
-            groupName));
-    ASSERT((0 <= groupName.length() &&
-            groupName.length() <= WA_MAX_NAME), "Invalid group name length");
+    // Reality check - case should have already been caught
     ASSERT((0 <= listOfClientNames.length() &&
             listOfClientNames.length() <= WA_MAX_INPUT),
            "Invalid clients list length");
@@ -190,9 +248,9 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
     CreateGroupMessage msg; // msg_type = CREATE_GROUP
 
     // Build message
-    msg.nameLen = groupName.length();
+    msg.nameLen = (name_len) groupName.length();
     msg.groupName = groupName.c_str();
-    msg.clientsLen = htonl(listOfClientNames.length()); //htonl(listOfClientNames.length());
+    msg.clientsLen = htonl((uint32_t)listOfClientNames.length()); //todo: raz- check validity of converting to uint32 not uint64, as defined in protocol
     msg.clientNames = listOfClientNames.c_str();
 
     // Send message
@@ -223,7 +281,7 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     // Build message
     msg.nameLen = targetName.length();
     msg.targetName = targetName.c_str();
-    msg.messageLen = htons(message.length());
+    msg.messageLen = htons((uint16_t)message.length());
     msg.msg = message.c_str();
 
     // Send message
@@ -245,7 +303,7 @@ ErrorCode Client::_RequestWho() const
 
     return ErrorCode::SUCCESS;
 }
-ErrorCode Client::_RequestExist() const
+ErrorCode Client::_RequestExit() const
 {
     // Init empty message
     ExitMessage msg; // msg_type = Exit
@@ -289,13 +347,17 @@ ErrorCode Client::_Run() {
     return FAIL;
 }
 
-Client::Client(const std::string clientName, const std::string serverAddress, const int serverPort) {
+Client::Client(const std::string clientName, const std::string serverAddress, const unsigned short serverPort) {
     this->name = clientName;
 
     if (ErrorCode::SUCCESS != this->_callSocket(serverAddress.c_str(), serverPort)){
         printf("Client failed to open socket with the server.\n");
         exit(-1);
     }
+}
+
+void Client::_cleanUp() {
+    close(this->connectedServer);
 }
 
 int main(int argc, char const *argv[]){
@@ -306,7 +368,7 @@ int main(int argc, char const *argv[]){
     std::string name = argv[1];
     std::string addr = argv[2]; //TODO: inet to a   -- for ip adr
 
-    int port =  std::stoi(argv[3], nullptr, 10);
+    unsigned short port =  std::stoi(argv[3], nullptr, 10); //todo unsigned short
 
     Client client{name, addr, port};
 

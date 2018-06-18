@@ -37,7 +37,7 @@ class Client{
 public:
     //ctors & dtors
 //    Client();
-    Client(const std::string clientName, const std::string serverAddress, const int serverPort );
+    Client(const std::string clientName, const std::string serverAddress, const unsigned short serverPort );
     ~Client();
 
 private:
@@ -71,13 +71,16 @@ public: // TODO: Raz: Resume private after done debugging
                                   const std::string& listOfClientNames);
     ErrorCode _RequestSendMessage(const std::string& targetName, const std::string& message) const;
     ErrorCode _RequestWho() const;
-    ErrorCode _RequestExist() const;
+    ErrorCode _RequestExit() const;
+    ErrorCode _readTaskResponse() const;
 
     ErrorCode _Run() ;
 
     int _configFDSets();
 
     ErrorCode _callSocket(const char *hostname, unsigned short port);
+
+    void _cleanUp();
 };
 
 #endif //OSEX4_CLIENT_H
