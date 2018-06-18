@@ -4,7 +4,8 @@
 
 #include "Client.h"
 
-
+void shit (){
+int shit = 0;
 //Client::Client() {
 //    char * addr{"aqua-81"};
 //    int port = 8080;
@@ -48,6 +49,8 @@
 //        perror("open exit.txt failed");
 //    }
 //}
+}
+
 Client::~Client() {}
 
 
