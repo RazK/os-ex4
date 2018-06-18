@@ -8,6 +8,9 @@
 #include <cstdint>
 #include "whatsappio.h"
 
+#define MIN_NAMES_IN_GROUP 2
+
+int max(int a, int b);
 
 struct clientWrapper{
     int sock;
@@ -96,6 +99,7 @@ typedef struct _ExitMessage{
 bool isValidName(const std::string& name);
 
 int _readData(int socket, void * buf , size_t n);
+int readFromSocket(int socket, std::string &outbuf, int count);
 
 void split(const std::string& string,
            const char& delim,

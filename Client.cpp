@@ -2,10 +2,14 @@
 // Created by heimy4prez on 6/16/18.
 //
 
+#include <unistd.h>
+#include <fcntl.h>
 #include "Client.h"
 
-void shit (){
-int shit = 0;
+
+#include <fstream>
+#include <boost/algorithm/string/join.hpp>
+
 //Client::Client() {
 //    char * addr{"aqua-81"};
 //    int port = 8080;
@@ -49,32 +53,98 @@ int shit = 0;
 //        perror("open exit.txt failed");
 //    }
 //}
-}
-
 Client::~Client() {}
 
+ErrorCode Client::_ClientStdInput(){
+    // Read until \n from STDIN
+    std::string command;
+    std::getline (std::cin,command);
+
+    // Parse command
+    command_type commandT; /*OUT*/
+    std::string name;  /*OUT*/
+    std::string message;  /*OUT*/
+    std::vector<std::string> clients; /*OUT*/
+    parse_command(command, commandT, name, message, clients);
+
+    // Handle accordingly
+    switch (commandT){
+        case command_type::CREATE_GROUP:
+        {
+            // Merge clients list into single string
+            if (clients.size() < MIN_NAMES_IN_GROUP){
+                return ErrorCode::FAIL;
+            }
+            std::string clientsJoined = "";
+            for (auto client : clients){
+                clientsJoined.append(client);
+                clientsJoined.append(",");
+            }
+            clientsJoined.pop_back();
+
+            // Send protocol CREATE_GROUP message
+            return this->_RequestCreateGroup(name, clientsJoined);
+        }
+        case command_type::SEND:
+        {
+            // Send protocol SEND_MESSAGE message
+            return this->_RequestSendMessage(name, message);
+        }
+        case command_type::EXIT:
+        {
+            // Send protocol EXIST message
+            return this->_RequestExist();
+        }
+        case command_type::WHO:
+        {
+            // Send protocol WHO message
+            return this->_RequestWho();
+        }
+        default:
+        {
+            return ErrorCode::FAIL;
+        }
+    }
+}
+
+ErrorCode Client::_ParseMessageFromServer(){
+    char message[WA_MAX_MESSAGE+1];
+    bzero(message, WA_MAX_MESSAGE+1);
+    int read = _readData(this->connectedServer, message, WA_MAX_MESSAGE);
+    if (read == 0){
+        printf("Server disconnected unexpectedly.\r\n");
+        return ErrorCode::FAIL;
+    }
+    else if (read != WA_MAX_MESSAGE){
+        printf("Read from server socket failed.\r\n");
+        exit(-1);
+    }
+
+    printf("%s\r\n", message);
+    return ErrorCode::SUCCESS;
+}
 
 ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
-//    printf("HOST %s \n", hostname);
-    this->hp= gethostbyname (hostname);
-    if (this->hp == nullptr) {
+//    printf("HOST %connectedServer \n", hostname);
+    this->host= gethostbyname (hostname);
+    if (this->host == nullptr) {
         printf("failed to get host by name");
         return ErrorCode::FAIL;
     }
-    memset(&sa,0,sizeof(sa));
-    memcpy((char *)&this->sa.sin_addr , this->hp->h_addr , this->hp->h_length);
-    this->sa.sin_family = this->hp->h_addrtype;
-    this->sa.sin_port = htons((u_short)port);
+    memset(&serv_addr,0,sizeof(serv_addr));
+    memcpy((char *)&this->serv_addr.sin_addr , this->host->h_addr , this->host->h_length);
+    this->serv_addr.sin_family = this->host->h_addrtype;
+    this->serv_addr.sin_port = htons((u_short)port);
 
-    this->s = socket(this->hp->h_addrtype, SOCK_STREAM, 0);
-    if (this->s < 0) {
+    this->connectedServer = socket(this->host->h_addrtype, SOCK_STREAM, 0);
+    if (this->connectedServer < 0) {
         printf("client failed in socket\n");
         return ErrorCode::FAIL;
     }
 
-    if (connect(this->s, (struct sockaddr *)&this->sa , sizeof(this->sa)) < 0) {
-        close(this->s);
-        printf("client failed in connect\n");
+    if (connect(this->connectedServer, (struct sockaddr *)&this->serv_addr , sizeof(this->serv_addr)) < 0) {
+        close(this->connectedServer);
+        printf("Failed to connect to server. (Is server running? Correct address and port?)\n\r");
 
         return ErrorCode::FAIL;
     }
@@ -94,9 +164,10 @@ ErrorCode Client::_TellName(const std::string& myName){
     // Pad name with zeros up to WA_MAX_NAME
     std::string maxName(myName);
     maxName.resize(WA_MAX_NAME, 0);
+    const char* cstr = maxName.c_str();
 
     // Send padded name to host
-    ASSERT_WRITE(this->s, &maxName, WA_MAX_NAME);
+    ASSERT_WRITE(this->connectedServer, cstr, WA_MAX_NAME);
 
     return ErrorCode::SUCCESS;
 }
@@ -125,11 +196,11 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
     msg.clientNames = listOfClientNames.c_str();
 
     // Send message
-    ASSERT_WRITE(this->s, &msg.mtype, sizeof(msg.mtype));
-    ASSERT_WRITE(this->s, &msg.nameLen, sizeof(msg.nameLen));
-    ASSERT_WRITE(this->s, msg.groupName, groupName.length());
-    ASSERT_WRITE(this->s, &msg.clientsLen, sizeof(msg.clientsLen));
-    ASSERT_WRITE(this->s, msg.clientNames, listOfClientNames.length());
+    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
+    ASSERT_WRITE(this->connectedServer, msg.groupName, groupName.length());
+    ASSERT_WRITE(this->connectedServer, &msg.clientsLen, sizeof(msg.clientsLen));
+    ASSERT_WRITE(this->connectedServer, msg.clientNames, listOfClientNames.length());
 
     return ErrorCode::SUCCESS;
 }
@@ -156,11 +227,11 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     msg.msg = message.c_str();
 
     // Send message
-    ASSERT_WRITE(this->s, &msg.mtype, sizeof(msg.mtype));
-    ASSERT_WRITE(this->s, &msg.nameLen, sizeof(msg.nameLen));
-    ASSERT_WRITE(this->s, msg.targetName, targetName.length());
-    ASSERT_WRITE(this->s, &msg.messageLen, sizeof(msg.messageLen));
-    ASSERT_WRITE(this->s, msg.msg, message.length());
+    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
+    ASSERT_WRITE(this->connectedServer, msg.targetName, targetName.length());
+    ASSERT_WRITE(this->connectedServer, &msg.messageLen, sizeof(msg.messageLen));
+    ASSERT_WRITE(this->connectedServer, msg.msg, message.length());
 
     return ErrorCode::SUCCESS;
 }
@@ -170,7 +241,7 @@ ErrorCode Client::_RequestWho() const
     WhoMessage msg; // msg_type = WHO
 
     // Send message
-    ASSERT_WRITE(this->s, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
 
     return ErrorCode::SUCCESS;
 }
@@ -180,13 +251,41 @@ ErrorCode Client::_RequestExist() const
     ExitMessage msg; // msg_type = Exit
 
     // Send message
-    ASSERT_WRITE(this->s, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
 
     return ErrorCode::SUCCESS;
 }
 
+int Client::_configFDSets(){
+    // Zero the set of sockets
+    FD_ZERO(&this->openSocketsSet);
+
+    // Init the set of sockets
+    FD_SET(STDIN_FILENO, &this->openSocketsSet);                   // STDIN
+    FD_SET(this->connectedServer, &this->openSocketsSet);       // New connections socket
+
+    return max(STDIN_FILENO, this->connectedServer);
+}
+
 ErrorCode Client::_Run() {
 
+    while (true){
+        int max_fd = this->_configFDSets();
+        auto readfds = this->openSocketsSet; //TODO: need to make a copy here..
+        if (select(max_fd+1, &readfds, nullptr, nullptr, nullptr) < 0) {
+            print_error("_Run - select", 1);
+            exit(-1);
+        }
+        if (FD_ISSET(this->connectedServer, &readfds)) {
+            //will also add the client to the clientsfds
+            this->_ParseMessageFromServer();
+            continue;
+        }
+        if (FD_ISSET(STDIN_FILENO, &readfds)) {
+            this->_ClientStdInput();
+            continue;
+        }
+    }
     return FAIL;
 }
 
@@ -194,11 +293,9 @@ Client::Client(const std::string clientName, const std::string serverAddress, co
     this->name = clientName;
 
     if (ErrorCode::SUCCESS != this->_callSocket(serverAddress.c_str(), serverPort)){
-        printf("Err in socket calling\n");
-        return ;
+        printf("Client failed to open socket with the server.\n");
+        exit(-1);
     }
-
-
 }
 
 int main(int argc, char const *argv[]){
