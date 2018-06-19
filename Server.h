@@ -90,9 +90,8 @@ public:
     ErrorCode _HandleWho(const clientWrapper& client);
     ErrorCode _HandleExit(const clientWrapper& client);
 
-    ErrorCode _SendToClient(const std::string senderName,
-                                    const clientWrapper& targetClientW,
-                                    const std::string message);
+    ErrorCode _flushToClient(const clientWrapper &client, const std::string &string, bool endl)
+    const;
 
     bool isClientInGroup(const clientWrapper &clientW, const std::string &groupName);
 
@@ -102,11 +101,9 @@ public:
 
     void _serverStdInput();
 
-    void _HandleNewClient();
+    ErrorCode _HandleNewClient();
 
     void _cleanUp();
-
-    ErrorCode _flushToClient(const clientWrapper &client, const std::string &string, bool endl) const;
 
     /*
     * Description: Return if name is a group this server has initiated.

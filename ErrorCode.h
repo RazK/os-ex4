@@ -14,37 +14,69 @@ typedef enum _ErrorCode{
     BUG = 2
 } ErrorCode;
 
-#define ASSERT(cond, msg)                   \
-do {                                        \
-    if (!(cond)) {                          \
-        std::cerr <<  (msg) << std::endl;   \
-        exit(1);                             \
-    }                                       \
-} while (0)
+#ifdef DEBUG
+    #define ASSERT(cond, msg)                       \
+        do {                                        \
+            if (!(cond)) {                          \
+            std::cout << msg << std::endl;          \
+            exit(1);                                \
+            }                                       \
+        } while (0)
 
-#define ASSERTANDRET(cond, msg, retVal)     \
-do {                                        \
-    if (cond) {                             \
-        std::cerr <<  (msg) << std::endl;   \
-        return retVal;                      \
-    }                                       \
-} while (0)
+    #define CHECK_N_RET(cond, msg, retVal)          \
+        do {                                        \
+            if (!(cond)) {                          \
+                std::cout << msg << std::endl;      \
+                return retVal;                      \
+            }                                       \
+        } while (0)
 
-#define ASSERTANDDO(cond, f)                \
-do {                                        \
-    if (cond) {                             \
-        return f();                         \
-    }                                       \
-} while (0)
+    #define CHECK_N_DO(cond, f)                     \
+        do {                                        \
+            if (!(cond)) {                          \
+                return f();                         \
+            }                                       \
+        } while (0)
 
-#define ASSERTANDEXIT_SUCCESS(f, msg)       ASSERTANDEXIT((ErrorCode::SUCCESS != (f)), msg)
-#define ASSERTANDRET_SUCCESS(f, msg)        ASSERTANDRET((ErrorCode::SUCCESS != (f)), msg, ErrorCode::FAIL)
-#define ASSERTANDDO_SUCCESS(val, f)         ASSERTANDDO((ErrorCode::SUCCESS != (val)), f)
-#define ASSERTANDRET_NOT_NULL(obj, msg)     ASSERTANDRET((nullptr != (obj)), msg, ErrorCode::FAIL)
+    #define HOPE(wish, farewell)                    \
+        do {                                        \
+            if(!(wish)){                              \
+                std::cerr << farewell << std::endl; \
+            }                                       \
+        } while (0)
 
-#define ASSERT_WRITE(fd, buf, count)        ASSERT((count) == write(fd, buf, count), "Write error")
-#define ASSERT_READ(fd, buf, count)         ASSERT((count) == _readData(fd, buf, count), "Read error")
+#else
+    #define ASSERT(cond, msg)                       \
+        do {                                        \
+            if (!(cond)) {                          \
+                exit(1);                            \
+            }                                       \
+        } while (0)
 
-#define ASSERT_SUCCESS(f, msg)              ASSERT((ErrorCode::SUCCESS == (f)), msg)
+    #define CHECK_N_RET(cond, msg, retVal)          \
+            do {                                    \
+                if (!(cond)) {                      \
+                    return retVal;                  \
+                }                                   \
+            } while (0)
+
+    #define CHECK_N_DO(cond, f)                     \
+            do {                                    \
+                if (!(cond)) {                      \
+                    return f();                     \
+                }                                   \
+            } while (0)
+
+    #define HOPE(wish, farewell)                \
+        do {                                    \
+            if(!(wish)){                          \
+            }                                   \
+        }                                       \
+        while (0)
+#endif
+
+#define CHECK_WRITE_RET(fd, buf, count)        CHECK_N_RET((count) == write(fd, buf, count), "Write error", ErrorCode::FAIL)
+#define CHECK_READ_RET(fd, buf, count)         CHECK_N_RET((count) == _readData(fd, buf, count),"Read error", ErrorCode::FAIL)
+//#define ASSERT_SUCCESS(f, msg)              ASSERT((ErrorCode::SUCCESS == (f)), msg)
 
 #endif //OSEX4_ERRORCODE_H

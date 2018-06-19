@@ -121,7 +121,6 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
 //    printf("HOST %connectedServer \n", hostname);
     this->host= gethostbyname (hostname);
     if (this->host == nullptr) {
-        printf("failed to get host by name");
         return ErrorCode::FAIL;
     }
     memset(&serv_addr,0,sizeof(serv_addr));
@@ -131,36 +130,30 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
 
     this->connectedServer = socket(this->host->h_addrtype, SOCK_STREAM, 0);
     if (this->connectedServer < 0) {
-        printf("client failed in socket\n");
         return ErrorCode::FAIL;
     }
 
     if (connect(this->connectedServer, (struct sockaddr *)&this->serv_addr , sizeof(this->serv_addr)) < 0) {
         close(this->connectedServer);
-        printf("Failed to connect to server. (Is server running? Correct address and port?)\n\r");
-
         return ErrorCode::FAIL;
     }
 
-    ASSERT_SUCCESS(_TellName(this->name), "Failed in tellname in connection");
+    bool nameTold = (SUCCESS == _TellName(this->name));
 
     auto responseCode = this->_readTaskResponse();
-    if (responseCode == ErrorCode::SUCCESS){
-        print_connection();
+    if (nameTold && responseCode == ErrorCode::SUCCESS){
+        return ErrorCode::SUCCESS;
     }
-    else if (responseCode == ErrorCode::FAIL){
-        print_fail_connection();
-        exit(1);
-    }
-    ASSERT_SUCCESS(responseCode, ("Bug: Client got unexpected response from server while connecting."));
-    return responseCode;
+
+    // Oh no...
+    return ErrorCode::FAIL;
 }
 
 ErrorCode Client::_readTaskResponse() const{
     char response [TASK_RESP_SIZE];
     bzero(response, TASK_RESP_SIZE);
     _readData(this->connectedServer, &response, TASK_RESP_SIZE);
-//    ASSERT_READ(this->connectedServer, response, TASK_RESP_SIZE);
+//    CHECK_READ_RET(this->connectedServer, response, TASK_RESP_SIZE);
 
     std::string temp {response};
 
@@ -176,7 +169,7 @@ ErrorCode Client::_readTaskResponse() const{
 
 ErrorCode Client::_TellName(const std::string& myName){
     // Assert valid name
-    ASSERT(isValidName(myName), ("Tried to tell invalid name %s", myName));
+    CHECK_N_RET(isValidName(myName), ("Tried to tell invalid name %s", myName), ErrorCode::FAIL);
 
     // Pad name with zeros up to WA_MAX_NAME
     std::string maxName(myName);
@@ -184,7 +177,7 @@ ErrorCode Client::_TellName(const std::string& myName){
     const char* cstr = maxName.c_str();
 
     // Send padded name to host
-    ASSERT_WRITE(this->connectedServer, cstr, WA_MAX_NAME);
+    CHECK_WRITE_RET(this->connectedServer, cstr, WA_MAX_NAME);
 
     return ErrorCode::SUCCESS;
 }
@@ -193,9 +186,9 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
                                       const std::string& listOfClientNames)
 {
     // Reality check - case should have already been caught
-    ASSERT((0 <= listOfClientNames.length() &&
+    CHECK_N_RET((0 <= listOfClientNames.length() &&
             listOfClientNames.length() <= WA_MAX_INPUT),
-           "Invalid clients list length");
+           "Invalid clients list length", ErrorCode::FAIL);
 
     // Init empty message
     CreateGroupMessage msg; // msg_type = CREATE_GROUP
@@ -207,11 +200,11 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
     msg.clientNames = listOfClientNames.c_str();
 
     // Send message
-    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
-    ASSERT_WRITE(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
-    ASSERT_WRITE(this->connectedServer, msg.groupName, groupName.length());
-    ASSERT_WRITE(this->connectedServer, &msg.clientsLen, sizeof(msg.clientsLen));
-    ASSERT_WRITE(this->connectedServer, msg.clientNames, listOfClientNames.length());
+    CHECK_WRITE_RET(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    CHECK_WRITE_RET(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
+    CHECK_WRITE_RET(this->connectedServer, msg.groupName, groupName.length());
+    CHECK_WRITE_RET(this->connectedServer, &msg.clientsLen, sizeof(msg.clientsLen));
+    CHECK_WRITE_RET(this->connectedServer, msg.clientNames, listOfClientNames.length());
 
     return ErrorCode::SUCCESS;
 }
@@ -219,14 +212,14 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
 {
     // Validate arguments
     // Assert valid name
-    ASSERT(isValidName(targetName), ("Attempted to send message to target with invalid "
+    CHECK_N_RET(isValidName(targetName), ("Attempted to send message to target with invalid "
             "characters %s",
-            targetName));
-    ASSERT((0 <= targetName.length() &&
-            targetName.length() <= WA_MAX_NAME), "Invalid target name length");
-    ASSERT((0 <= message.length() &&
+            targetName), ErrorCode::FAIL);
+    CHECK_N_RET((0 <= targetName.length() &&
+            targetName.length() <= WA_MAX_NAME), "Invalid target name length", ErrorCode::FAIL);
+    CHECK_N_RET((0 <= message.length() &&
             message.length() <= WA_MAX_MESSAGE),
-           "Invalid message length");
+           "Invalid message length", ErrorCode::FAIL);
 
     // Init empty message
     SendMessage msg; // msg_type = SEND
@@ -238,11 +231,11 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     msg.msg = message.c_str();
 
     // Send message
-    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
-    ASSERT_WRITE(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
-    ASSERT_WRITE(this->connectedServer, msg.targetName, targetName.length());
-    ASSERT_WRITE(this->connectedServer, &msg.messageLen, sizeof(msg.messageLen));
-    ASSERT_WRITE(this->connectedServer, msg.msg, message.length());
+    CHECK_WRITE_RET(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    CHECK_WRITE_RET(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
+    CHECK_WRITE_RET(this->connectedServer, msg.targetName, targetName.length());
+    CHECK_WRITE_RET(this->connectedServer, &msg.messageLen, sizeof(msg.messageLen));
+    CHECK_WRITE_RET(this->connectedServer, msg.msg, message.length());
 
     return ErrorCode::SUCCESS;
 }
@@ -252,7 +245,7 @@ ErrorCode Client::_RequestWho() const
     WhoMessage msg; // msg_type = WHO
 
     // Send message
-    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    CHECK_WRITE_RET(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
 
     return ErrorCode::SUCCESS;
 }
@@ -262,7 +255,7 @@ ErrorCode Client::_RequestExit() const
     ExitMessage msg; // msg_type = Exit
 
     // Send message
-    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    CHECK_WRITE_RET(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
 
     return ErrorCode::SUCCESS;
 }
@@ -304,9 +297,12 @@ Client::Client(const std::string clientName, const std::string serverAddress, co
     this->name = clientName;
 
     if (ErrorCode::SUCCESS != this->_callSocket(serverAddress.c_str(), serverPort)){
-        printf("Client failed to open socket with the server.\n");
-        exit(-1);
+        print_fail_connection();
+        exit(1);
     }
+
+    // Yay! Client connected to server
+    print_connection();
 }
 
 void Client::_cleanUp() {
@@ -324,7 +320,6 @@ int main(int argc, char const *argv[]){
     unsigned short port =  std::stoi(argv[3], nullptr, 10); //todo unsigned short
 
     Client client{name, addr, port};
-
 
     client._Run();
 }

@@ -119,32 +119,31 @@ ErrorCode Server::_ParseMessage(const clientWrapper& client)
         {
             std::string groupName(WA_MAX_NAME, 0);
             std::string clientNamesList(WA_MAX_INPUT, 0);
-            ASSERT_SUCCESS(_ParseCreateGroup(client, groupName, clientNamesList), "Failed to parse "
-                    "create_group message\r\n");
+            bool success = (SUCCESS == _ParseCreateGroup(client, groupName, clientNamesList) &&
+                            SUCCESS == _HandleCreateGroup(client, groupName, clientNamesList));
 
-            ASSERT_SUCCESS(_HandleCreateGroup(client, groupName, clientNamesList), "Failed to handle "
-                    "create_group message\r\n");
+            print_create_group(true, success, client.name, groupName);
             break;
         }
         case command_type::SEND:
         {
             std::string targetName(WA_MAX_NAME, 0);
             std::string message(WA_MAX_MESSAGE, 0);
-            ASSERT_SUCCESS(_ParseSendMessage(client, targetName, message), "Failed to parse "
-                    "send_message message\r\n");
-
-            ASSERT_SUCCESS(_HandleSendMessage(client, targetName, message), "Failed to handle "
-                    "send_message message\r\n");
+            bool success = (SUCCESS == _ParseSendMessage(client, targetName, message) &&
+                            SUCCESS == _HandleSendMessage(client, targetName, message));
+            print_send(true, success, client.name, targetName, message);
             break;
         }
         case command_type::WHO:
         {
-            ASSERT_SUCCESS(_HandleWho(client), "Failed to handle who_message\r\n");
+            bool success = (SUCCESS == _HandleWho(client));
+            print_who_server(client.name);
             break;
         }
         case command_type::EXIT:
         {
-            ASSERT_SUCCESS(_HandleExit(client), "Failed to handle exit_message\r\n");
+            bool success = (SUCCESS == _HandleExit(client));
+            print_exit(true, client.name);
             break;
         }
         default:
@@ -157,15 +156,12 @@ ErrorCode Server::_ParseMessage(const clientWrapper& client)
 }
 
 ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName){
-
-    //char temp[WA_MAX_NAME];
-    //bzero(temp, WA_MAX_NAME);
     std::string temp;  // = "" is redundant
 
     // Read Name
-    //ASSERT_READ(client_sock, &temp, WA_MAX_NAME);
-    // TODO: check retval
-    readFromSocket(client_sock, temp, WA_MAX_NAME);
+    if (SUCCESS != readFromSocket(client_sock, temp, WA_MAX_NAME)){
+        return ErrorCode::FAIL;
+    };
 
     // Resize up to '\0'
     int nameLen = strnlen(temp.c_str(), WA_MAX_NAME);
@@ -173,7 +169,8 @@ ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName)
     clientName.resize(nameLen);
 
     // Assert name is legal
-    ASSERT(isValidName(clientName), "BUG: Invalid client name found in server - client must catch this first");
+    CHECK_N_RET(isValidName(clientName), "BUG: Invalid client name found in server - client must catch "
+            "this first", ErrorCode::FAIL);
 
     return ErrorCode::SUCCESS;
 }
@@ -185,34 +182,32 @@ ErrorCode Server::_ParseCreateGroup(const clientWrapper& client, std::string& /*
     clients_len clientsLen;
 
     // Parse group-name length
-    ASSERT_READ(client.sock, &nameLen, sizeof(name_len));
+    CHECK_READ_RET(client.sock, &nameLen, sizeof(name_len));
 
     // Assert length is legal
-    ASSERT((0 <= nameLen &&
+    HOPE((0 <= nameLen &&
             nameLen <= WA_MAX_NAME), "Invalid group name length");
 
     // Read group name
-    ASSERT_READ(client.sock, &groupName[0], nameLen);
+    CHECK_READ_RET(client.sock, &groupName[0], nameLen);
     groupName.resize(nameLen);
 
-    // Assert name is legal
-    ASSERT(isValidName(groupName), "Invalid group name characters");
-
     // Parse client-names length
-    ASSERT_READ(client.sock, &clientsLen, sizeof(clients_len));
+    CHECK_READ_RET(client.sock, &clientsLen, sizeof(clients_len));
     clientsLen = ntohl(clientsLen);
 
     // Assert length is legal
-    ASSERT((0 <= clientsLen &&
+    HOPE((0 <= clientsLen &&
             clientsLen <= WA_MAX_MESSAGE),
            "Invalid clients list length");
 
     // Read client names
-    ASSERT_READ(client.sock, &listOfClientNames[0], clientsLen);
+    CHECK_READ_RET(client.sock, &listOfClientNames[0], clientsLen);
     listOfClientNames.resize(clientsLen);
 
     return ErrorCode::SUCCESS;
 }
+
 ErrorCode Server::_ParseSendMessage(const clientWrapper& client,
                                     std::string& /* OUT */ targetName,
                                     std::string& /* OUT */ message) const {
@@ -220,32 +215,29 @@ ErrorCode Server::_ParseSendMessage(const clientWrapper& client,
     message_len messageLen;
 
     // Parse group-name length
-    ASSERT_READ(client.sock, &nameLen, sizeof(name_len));
+    CHECK_READ_RET(client.sock, &nameLen, sizeof(name_len));
 
     // Assert length is legal
-    ASSERT((0 <= nameLen &&
+    HOPE((0 <= nameLen &&
             nameLen <= WA_MAX_NAME), "Invalid target name length");
 
     // Read group name
-    ASSERT_READ(client.sock, &targetName[0], nameLen);
+    CHECK_READ_RET(client.sock, &targetName[0], nameLen);
     targetName.resize(nameLen);
 
     // Parse client-names length
-    ASSERT_READ(client.sock, &messageLen, sizeof(message_len));
-    // Assert name is legal
-    ASSERT(isValidName(targetName), "Invalid target name characters");
+    CHECK_READ_RET(client.sock, &messageLen, sizeof(message_len));
 
     // Parse message length
-//    ASSERT_READ(client.sock, &message, sizeof(message_len));
     messageLen = ntohs(messageLen);
 
     // Assert length is legal
-    ASSERT((0 <= messageLen &&
+    HOPE((0 <= messageLen &&
             messageLen <= WA_MAX_MESSAGE),
            "Invalid message length");
 
     // Read client names
-    ASSERT_READ(client.sock, &message[0], messageLen);
+    CHECK_READ_RET(client.sock, &message[0], messageLen);
     message.resize(messageLen);
 
     return ErrorCode::SUCCESS;
@@ -259,6 +251,8 @@ ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
                                      const std::string& groupName,
                                      const std::string& listOfClientNames)
 {
+    ErrorCode status = ErrorCode::BUG;
+
     // emplace in groupmembers the results of parsing the list of clients
     std::vector<std::string> groupMembers;
     split(listOfClientNames, ',', groupMembers);
@@ -293,19 +287,21 @@ ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
             wrappedGroup.emplace_back(this->_getClient(name));
         }
         this->groups.emplace(std::pair<std::string, std::vector<clientWrapper>>(groupName, wrappedGroup)); //TODO: maybe should clientWrapper rather than string?
+        status = ErrorCode::SUCCESS;
+    }
+    else{
+        status = ErrorCode::FAIL;
     }
 
-    print_create_group(true, valid, client.name, groupName);
-
     auto response = getResponse(bool2TCase(valid));
+    CHECK_WRITE_RET(client.sock, response.c_str(), TASK_RESP_SIZE);
 
-    ASSERT_WRITE(client.sock, response.c_str(), TASK_RESP_SIZE);
-
-    return ErrorCode::SUCCESS; //invalid does not mean not success
+    return status; //invalid does not mean not success
 }
 
 bool Server::isClientInGroup(const clientWrapper &clientW, const std::string &groupName){
-    auto target = std::find(this->groups[groupName].begin(), this->groups[groupName].begin(), clientW);
+    auto target = std::find(this->groups[groupName].begin(), this->groups[groupName].end(),
+                            clientW);
     return !(target == this->groups[groupName].end());
 }
 
@@ -313,56 +309,47 @@ ErrorCode Server::_HandleSendMessage(const clientWrapper& sender,
                                      const std::string& targetName,
                                      const std::string& message)
 {
+    bool messageSent = false;
     bool valid = (
             isValidName(sender.name) &&                         // sender is legal name -- superfluous
             _isClient(sender.name) &&                           // sender is recognized -- superfluous
             isValidName(targetName) &&                          // target has legal name
-            (_isClient(targetName) || _isGroup(targetName)) &&  // sender is recognized
             !message.empty() &&                                 // non empty message
             !(sender.name == targetName)                        // not messaging self
                                                                 // TODO: valid message?
     );
 
-    if (valid){
-//        auto fullMessage = padMessage(sender.name, WA_MAX_NAME) + ":\n" + padMessage(message, WA_MAX_MESSAGE);
-        if (_isGroup(targetName)){
+    if (valid) {
+        if (_isGroup(targetName)) { // Target is a GROUP
             // Make sure sender is in group
-            if (!isClientInGroup(sender, targetName)){
+            if (!isClientInGroup(sender, targetName)) {
                 valid = false;
-            }
-            else
-            {
+            } else {
                 // Send message to all group members (except self)
-                auto totalStatus = ErrorCode::SUCCESS;
-                for (const auto &client : this->groups[targetName]) {
-                    if ((client.name != sender.name)) {
+                messageSent = true;
+                for (const auto &groupMember : this->groups[targetName]) {
+                    if ((groupMember.name != sender.name)) {
                         auto temp = sender.name + ": ";
-                        ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, false), "Failed to flush "
-                                "sender's name");
-                        temp = message;
-                        ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, true), "Failed to flush send message contents");
+                        messageSent = messageSent && (SUCCESS == this->_flushToClient(groupMember,
+                                                                                      (sender.name +
+                                                                                       ": " +
+                                                                                       message),
+                                                                                      true));
                     }
                 }
-                return totalStatus;
             }
-        } else {
-            const auto & targetClientW = this->_getClient(targetName);
-            ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
-            auto temp = sender.name + ": ";
-            ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, false), "Failed to flush "
-                    "sender's name");
-            temp = message;
-            ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, true), "Failed to flush send message contents");
+        } else if (_isClient(targetName)) { // Target is a CLIENT
+            const auto &targetClientW = this->_getClient(targetName);
+            messageSent = (SUCCESS ==
+                           this->_flushToClient(targetClientW, (sender.name + ": " + message),
+                                                true));
         }
     }
 
-    print_send(true, valid, sender.name, targetName, message);
+    auto response = getResponse(bool2TCase(valid && messageSent));
 
-    auto response = getResponse(bool2TCase(valid));
-
-    ASSERT_WRITE(sender.sock, response.c_str(), TASK_RESP_SIZE);
-
-    return ErrorCode::SUCCESS; //invalid does not mean not success
+    CHECK_WRITE_RET(sender.sock, response.c_str(), TASK_RESP_SIZE);
+    return (messageSent && valid ? ErrorCode::SUCCESS : ErrorCode::FAIL);
 }
 
 ErrorCode Server::_flushToClient(const clientWrapper &client, const std::string &string, bool endl) const{
@@ -373,8 +360,7 @@ ErrorCode Server::_flushToClient(const clientWrapper &client, const std::string 
     // resize to standard message size - 256 + 2 (\n\r)
     message.resize(WA_MAX_FLUSH, 0);
 
-    ASSERT_WRITE(client.sock, message.c_str(), message.length());
-
+    CHECK_WRITE_RET(client.sock, message.c_str(), message.length());
     return ErrorCode::SUCCESS;
 
 }
@@ -382,8 +368,6 @@ ErrorCode Server::_flushToClient(const clientWrapper &client, const std::string 
 
 ErrorCode Server::_HandleWho(const clientWrapper & client)
 {
-    print_who_server(client.name);
-
     // prints are expected sorted
     std::sort(this->connectedClients.begin(), this->connectedClients.end(), compareClientWrapper);
 
@@ -406,7 +390,6 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
 ErrorCode Server::_HandleExit(const clientWrapper& client)
 {
     bool legal = (this->_isClient(client.name));            // reality check.. should be true if no bug
-    print_exit(true, client.name);
 
     if (legal){
         auto iter = this->connectedClients.begin();
@@ -415,7 +398,7 @@ ErrorCode Server::_HandleExit(const clientWrapper& client)
                 break;
             }
         }
-        ASSERT(iter != this->connectedClients.end(), "Got unexpected iter in handle exit");
+
         this->connectedClients.erase(iter);               // rm from clients
         for (auto &group : this->groups){
             auto iter2 = group.second.begin();    // iterate over group name vector (in second)
@@ -429,10 +412,8 @@ ErrorCode Server::_HandleExit(const clientWrapper& client)
             if (iter2 != group.second.end()){
                 group.second.erase(iter2);                // rm from group
             }
-            if (group.second.size() == 1){                  // last one in a group is a rotten egg
-                // todo: is a group of only one member considered valid after erasing?
-            }
-            if (group.second.empty()){                  // empty group is super rotten
+            if (group.second.size() == 1 ||
+                group.second.empty()){                  // empty group is super rotten
                 groups.erase(group.first);
             }
         }
@@ -498,20 +479,6 @@ void Server::_serverStdInput() {
 
 }
 
-ErrorCode Server::_flushToClient(const clientWrapper &client, const std::string &string, bool endl) const{
-    std::string message = string;
-    if (endl){
-        message += "\r\n";
-    }
-    // resize to standard message size - 256 + 2 (\n\r)
-    message.resize(WA_MAX_FLUSH, 0);
-
-    ASSERT_WRITE(client.sock, message.c_str(), message.length());
-
-    return ErrorCode::SUCCESS;
-
-}
-
 void Server::_cleanUp(){
     for (const auto &connectedClient : this->connectedClients) {
         close(connectedClient.sock);
@@ -519,30 +486,28 @@ void Server::_cleanUp(){
     close(this->welcomeClientsSocket);
 }
 
-void Server::_HandleNewClient() {
+ErrorCode Server::_HandleNewClient() {
+    bool success = false;
     auto t = _getConnection();
     if (t < 0){
         print_error("_Run - connectNewClient", 2);
         exit(-1);
     }
     std::string name;
-    ASSERT_SUCCESS(_ParseName(t, name), "Parse name failed in _Run");
+    success = (SUCCESS == _ParseName(t, name));
 
-//    printf("New Client: %s\r\n", name.c_str());
-
-    if (!(this->_isGroup(name) || this->_isClient(name))){
-        connectedClients.emplace_back(clientWrapper{t, name});
-        print_connection_server(name); // successful
-        ASSERT_WRITE(t, TASK_SUCCESSFUL, TASK_RESP_SIZE);
-
-        // todo: force client to print connection
-    } else {  // this name is already in use
-        ASSERT_WRITE(t, TASK_FAILURE, TASK_RESP_SIZE);
-        //todo: force client to call print_dup_connection and exit
+    if (success) {
+        if (!(this->_isGroup(name) || this->_isClient(name))) {
+            connectedClients.emplace_back(clientWrapper{t, name});
+            print_connection_server(name); // successful
+            CHECK_WRITE_RET(t, TASK_SUCCESSFUL, TASK_RESP_SIZE);
+        } else {  // this name is already in use
+            CHECK_WRITE_RET(t, TASK_USED_NAME, TASK_RESP_SIZE);
+        }
+    } else{
+        CHECK_WRITE_RET(t, TASK_FAILURE, TASK_RESP_SIZE);
     }
-
-
-
+    return SUCCESS;
 }
 
 bool Server::_isClient(const std::string& name) const{
