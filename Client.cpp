@@ -112,13 +112,19 @@ ErrorCode Client::_ParseMessageFromServer(){
         printf("Read from server socket failed in parsemessagefromserver.\r\n");
         exit(-1);
     }
+    std::string out{message};
+    // Check if server is trying to communicate and unexpected exit
+    if (out == EXIT_INDICATOR){
+        _cleanUp();
+        exit(1);
+    }
+
     std::cout << message ;  // no endline. should be included in message
 //    printf("%s\r\n", message);
     return ErrorCode::SUCCESS;
 }
 
 ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
-//    printf("HOST %connectedServer \n", hostname);
     this->host= gethostbyname (hostname);
     if (this->host == nullptr) {
         return ErrorCode::FAIL;
@@ -141,8 +147,21 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
     bool nameTold = (SUCCESS == _TellName(this->name));
 
     auto responseCode = this->_readTaskResponse();
+<<<<<<< Updated upstream
     if (nameTold && responseCode == ErrorCode::SUCCESS){
         return ErrorCode::SUCCESS;
+=======
+    if (responseCode == ErrorCode::SUCCESS){
+        print_connection();
+    }
+    else if( responseCode == ErrorCode::SPECIAL) {
+        print_dup_connection();
+        exit(1);
+    }
+    else if (responseCode == ErrorCode::FAIL){
+        print_fail_connection();
+        exit(1);
+>>>>>>> Stashed changes
     }
 
     // Oh no...
@@ -162,6 +181,9 @@ ErrorCode Client::_readTaskResponse() const{
     }
     else if (TASK_FAILURE == temp){
         return ErrorCode::FAIL;
+    }
+    else if (TASK_USED_NAME == temp){
+        return ErrorCode::SPECIAL;
     }
     return ErrorCode::BUG;
 

@@ -15,11 +15,15 @@
 #define TASK_USED_NAME   ("USED")
 #define TASK_BUG         ("BUGG")
 #define TASK_UNDEFINED   ("UNDF")
+#define TASK_EXIT        ("EXIT")
 #define TASK_RESP_SIZE   (4)
 
 const int WA_MAX_FLUSH = WA_MAX_NAME + 2 /* ": " */ + WA_MAX_MESSAGE + 2 /* "\r\n" */;
 
 const char PAD = '#';
+
+const std::string EXIT_INDICATOR = "EXITEXITEXITEXITEXITEXITEXITEXITEXITEXIT";
+
 
 int max(int a, int b);
 

@@ -375,7 +375,9 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
     for (auto &connectedClient : this->connectedClients) {
         allNames += connectedClient.name + ",";
     }
-    allNames.pop_back();
+    allNames[allNames.length() - 1] = '.';
+//    allNames.pop_back();
+//    allNames += ".";
     int i = 0;
     for (i ; i < ((long)allNames.length() - (long)WA_MAX_MESSAGE); i += WA_MAX_MESSAGE ){
         // write a slice of 256 at a time, w/o endline
@@ -469,9 +471,8 @@ void Server::_serverStdInput() {
     std::string command;
     std::getline (std::cin, command);
     if (command == (SERVER_INPUT_EXIT)){
-        print_exit();
         this->_cleanUp();
-        //todo: for connectedClient to exit(1)
+        print_exit();
         exit(0);
     } else {
         print_invalid_input();
@@ -481,6 +482,7 @@ void Server::_serverStdInput() {
 
 void Server::_cleanUp(){
     for (const auto &connectedClient : this->connectedClients) {
+        _flushToClient(connectedClient, EXIT_INDICATOR, false);
         close(connectedClient.sock);
     }
     close(this->welcomeClientsSocket);
