@@ -69,7 +69,7 @@ ErrorCode Client::_ClientStdInput(){
         {
             // Send protocol SEND_MESSAGE message
             auto valid =  (ErrorCode::SUCCESS == this->_RequestSendMessage(name, message) &&
-                            ErrorCode::SUCCESS == this->_readTaskResponse()
+                           ErrorCode::SUCCESS == this->_readTaskResponse()
                     );
             print_send(false, valid, this->name, name, message);
             return ErrorCode::SUCCESS;
@@ -100,20 +100,20 @@ ErrorCode Client::_ClientStdInput(){
 }
 
 ErrorCode Client::_ParseMessageFromServer(){
-    char message[WA_MAX_MESSAGE+1];
-    bzero(message, WA_MAX_MESSAGE+1);
-    int read = _readData(this->connectedServer, message, WA_MAX_MESSAGE);
+    char message[WA_MAX_FLUSH+1];
+    bzero(message, WA_MAX_FLUSH+1);
+    int read = _readData(this->connectedServer, message, WA_MAX_FLUSH);
     if (read == 0){
-        printf("Server disconnected unexpectedly.\r\n");
+        printf("Server disconnected unexpectedly in parsemessagefromserver.\r\n");
         exit(1);
         return ErrorCode::FAIL;
     }
-    else if (read != WA_MAX_MESSAGE){
-        printf("Read from server socket failed.\r\n");
+    else if (read != WA_MAX_FLUSH){
+        printf("Read from server socket failed in parsemessagefromserver.\r\n");
         exit(-1);
     }
-
-    printf("%s\r\n", message);
+    std::cout << message ;  // no endline. should be included in message
+//    printf("%s\r\n", message);
     return ErrorCode::SUCCESS;
 }
 

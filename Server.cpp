@@ -336,20 +336,23 @@ ErrorCode Server::_HandleSendMessage(const clientWrapper& sender,
                 auto totalStatus = ErrorCode::SUCCESS;
                 for (const auto &client : this->groups[targetName]) {
                     if ((client.name != sender.name)) {
-                        auto status = _SendToClient(sender.name, client, message);
-                        if (ErrorCode::SUCCESS != status) {
-                            totalStatus = FAIL;
-                        };
+                        auto temp = sender.name + ": ";
+                        ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, false), "Failed to flush "
+                                "sender's name");
+                        temp = message;
+                        ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, true), "Failed to flush send message contents");
                     }
                 }
                 return totalStatus;
             }
         } else {
-            auto targetClientW = this->_getClient(targetName);
-            auto status = _SendToClient(sender.name, targetClientW, message);
-            if (ErrorCode::SUCCESS != status){
-                return status;
-            };
+            const auto & targetClientW = this->_getClient(targetName);
+            ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
+            auto temp = sender.name + ": ";
+            ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, false), "Failed to flush "
+                    "sender's name");
+            temp = message;
+            ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, true), "Failed to flush send message contents");
         }
     }
 
@@ -362,17 +365,20 @@ ErrorCode Server::_HandleSendMessage(const clientWrapper& sender,
     return ErrorCode::SUCCESS; //invalid does not mean not success
 }
 
-ErrorCode Server::_SendToClient(const std::string senderName,
-                                const clientWrapper& targetClientW,
-                                const std::string message){
-    ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
-    auto full_message = senderName;
-    full_message.append(": ");
-    full_message.append(message);
-    full_message.resize(WA_MAX_MESSAGE, 0);
-    ASSERT_WRITE(targetClientW.sock, full_message.c_str(), full_message.length());
+ErrorCode Server::_flushToClient(const clientWrapper &client, const std::string &string, bool endl) const{
+    std::string message = string;
+    if (endl){
+        message += "\r\n";
+    }
+    // resize to standard message size - 256 + 2 (\n\r)
+    message.resize(WA_MAX_FLUSH, 0);
+
+    ASSERT_WRITE(client.sock, message.c_str(), message.length());
+
     return ErrorCode::SUCCESS;
+
 }
+
 
 ErrorCode Server::_HandleWho(const clientWrapper & client)
 {
@@ -386,9 +392,13 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
         allNames += connectedClient.name + ",";
     }
     allNames.pop_back();
-    allNames.resize(WA_MAX_MESSAGE, 0);
-
-    ASSERT_WRITE(client.sock, allNames.c_str(), allNames.length());
+    int i = 0;
+    for (i ; i < ((long)allNames.length() - (long)WA_MAX_MESSAGE); i += WA_MAX_MESSAGE ){
+        // write a slice of 256 at a time, w/o endline
+        this->_flushToClient(client, allNames.substr((unsigned long)i, WA_MAX_MESSAGE ), false);
+    }
+    // once more for last slice, and send endline.
+    this->_flushToClient(client, allNames.substr((unsigned long)i, WA_MAX_MESSAGE ), true);
 
     return ErrorCode::SUCCESS;
 }
@@ -485,6 +495,20 @@ void Server::_serverStdInput() {
     } else {
         print_invalid_input();
     }
+
+}
+
+ErrorCode Server::_flushToClient(const clientWrapper &client, const std::string &string, bool endl) const{
+    std::string message = string;
+    if (endl){
+        message += "\r\n";
+    }
+    // resize to standard message size - 256 + 2 (\n\r)
+    message.resize(WA_MAX_FLUSH, 0);
+
+    ASSERT_WRITE(client.sock, message.c_str(), message.length());
+
+    return ErrorCode::SUCCESS;
 
 }
 
