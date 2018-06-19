@@ -323,14 +323,12 @@ ErrorCode Server::_HandleSendMessage(const clientWrapper& client,
         if (_isGroup(targetName)){
             //TODO: write some function that sends to whole group
         } else {
-            auto targetClientW = this->_getClient(targetName);
+            const auto & targetClientW = this->_getClient(targetName);
             ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
             auto temp = client.name + ":";
-            temp.resize(WA_MAX_MESSAGE, 0);
-            ASSERT_WRITE(targetClientW.sock, temp.c_str(), temp.length());
+            ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, true), "Failed to flush sender's name");
             temp = message;
-            temp.resize(WA_MAX_MESSAGE, 0);
-            ASSERT_WRITE(targetClientW.sock, temp.c_str(), temp.length());
+            ASSERT_SUCCESS(this->_flushToClient(targetClientW, temp, true), "Failed to flush send message contents");
         }
     }
 
@@ -355,9 +353,13 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
         allNames += connectedClient.name + ",";
     }
     allNames.pop_back();
-    allNames.resize(WA_MAX_MESSAGE, 0);
-
-    ASSERT_WRITE(client.sock, allNames.c_str(), allNames.length());
+    int i = 0;
+    for (i ; i < ((long)allNames.length() - (long)WA_MAX_MESSAGE); i += WA_MAX_MESSAGE ){
+        // write a slice of 256 at a time, w/o endline
+        this->_flushToClient(client, allNames.substr((unsigned long)i, WA_MAX_MESSAGE ), false);
+    }
+    // once more for last slice, and send endline.
+    this->_flushToClient(client, allNames.substr((unsigned long)i, WA_MAX_MESSAGE ), true);
 
     return ErrorCode::SUCCESS;
 }
@@ -454,6 +456,20 @@ void Server::_serverStdInput() {
     } else {
         print_invalid_input();
     }
+
+}
+
+ErrorCode Server::_flushToClient(const clientWrapper &client, const std::string &string, bool endl) const{
+    std::string message = string;
+    if (endl){
+        message += "\r\n";
+    }
+    // resize to standard message size - 256 + 2 (\n\r)
+    message.resize(WA_MAX_FLUSH, 0);
+
+    ASSERT_WRITE(client.sock, message.c_str(), message.length());
+
+    return ErrorCode::SUCCESS;
 
 }
 

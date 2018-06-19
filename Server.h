@@ -100,6 +100,8 @@ public:
 
     void _cleanUp();
 
+    ErrorCode _flushToClient(const clientWrapper &client, const std::string &string, bool endl) const;
+
     /*
     * Description: Return if name is a group this server has initiated.
     */
