@@ -10,6 +10,49 @@
 #include <fstream>
 #include <boost/algorithm/string/join.hpp>
 
+//Client::Client() {
+//    char * addr{"aqua-81"};
+//    int port = 8080;
+//    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
+//        printf("Err in socket calling\n");
+//        return ;
+//    }
+//    write(this->s, "finally, a message", 100);
+//    this->_readData(1024);
+//
+//    printf("Client read: %serverSocketClient", this->buf);
+//
+//    // TODO: REMOVE THESE LINES
+//    this->_sock_fd = open("/cs/+/usr/razkarl/os-ex4/client_test.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_sock_fd == -1)
+//    {
+//        perror("open failed");
+//    }
+//    this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
+//                                                                               O_NONBLOCK);
+//    if (this->_create_group_fd == -1)
+//    {
+//        perror("open create_group.txt failed");
+//    }
+//
+//    this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_send_fd == -1)
+//    {
+//        perror("open send.txt failed");
+//    }
+//
+//    this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_who_fd == -1)
+//    {
+//        perror("open who.txt failed");
+//    }
+//
+//    this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
+//    if (this->_exit_fd == -1)
+//    {
+//        perror("open exit.txt failed");
+//    }
+//}
 Client::~Client() {}
 
 /* wrapper for short circuit protection against undefined behavior - removes last comma <,> in string */
@@ -48,7 +91,7 @@ ErrorCode Client::_ClientStdInput(){
             std::string clientsJoined;
             for (const auto &client : clients){
                 valid =     (isValidName(client) &&                         //legal name by alphanumeric and length
-                          /*(client != groupName) && */                     //This member-client's name isn't group name
+                            (client != groupName) &&                        //This member-client's name isn't group name
                             (client != this->name || clients.size() > 1) && //If this client in list then list is at least 2 long
                             (valid));                                       //Don't erase validity so far for all members
                 clientsJoined.append(client);
@@ -125,8 +168,10 @@ ErrorCode Client::_ParseMessageFromServer(){
 }
 
 ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
+//    printf("HOST %connectedServer \n", hostname);
     this->host= gethostbyname (hostname);
     if (this->host == nullptr) {
+        printf("failed to get host by name");
         return ErrorCode::FAIL;
     }
     memset(&serv_addr,0,sizeof(serv_addr));
@@ -136,21 +181,20 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
 
     this->connectedServer = socket(this->host->h_addrtype, SOCK_STREAM, 0);
     if (this->connectedServer < 0) {
+        printf("client failed in socket\n");
         return ErrorCode::FAIL;
     }
 
     if (connect(this->connectedServer, (struct sockaddr *)&this->serv_addr , sizeof(this->serv_addr)) < 0) {
         close(this->connectedServer);
+        printf("Failed to connect to server. (Is server running? Correct address and port?)\n\r");
+
         return ErrorCode::FAIL;
     }
 
-    bool nameTold = (SUCCESS == _TellName(this->name));
+    ASSERT_SUCCESS(_TellName(this->name), "Failed in tellname in connection");
 
     auto responseCode = this->_readTaskResponse();
-<<<<<<< Updated upstream
-    if (nameTold && responseCode == ErrorCode::SUCCESS){
-        return ErrorCode::SUCCESS;
-=======
     if (responseCode == ErrorCode::SUCCESS){
         print_connection();
     }
@@ -161,18 +205,17 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
     else if (responseCode == ErrorCode::FAIL){
         print_fail_connection();
         exit(1);
->>>>>>> Stashed changes
     }
-
-    // Oh no...
-    return ErrorCode::FAIL;
+    ASSERT_SUCCESS(responseCode, ("Bug: Client got unexpected response from server while connecting."));
+    return responseCode;
 }
+
 
 ErrorCode Client::_readTaskResponse() const{
     char response [TASK_RESP_SIZE];
     bzero(response, TASK_RESP_SIZE);
     _readData(this->connectedServer, &response, TASK_RESP_SIZE);
-//    CHECK_READ_RET(this->connectedServer, response, TASK_RESP_SIZE);
+//    ASSERT_READ(this->connectedServer, response, TASK_RESP_SIZE);
 
     std::string temp {response};
 
@@ -189,9 +232,11 @@ ErrorCode Client::_readTaskResponse() const{
 
 }
 
+
+
 ErrorCode Client::_TellName(const std::string& myName){
     // Assert valid name
-    CHECK_N_RET(isValidName(myName), ("Tried to tell invalid name %s", myName), ErrorCode::FAIL);
+    ASSERT(isValidName(myName), ("Tried to tell invalid name %s", myName));
 
     // Pad name with zeros up to WA_MAX_NAME
     std::string maxName(myName);
@@ -199,18 +244,19 @@ ErrorCode Client::_TellName(const std::string& myName){
     const char* cstr = maxName.c_str();
 
     // Send padded name to host
-    CHECK_WRITE_RET(this->connectedServer, cstr, WA_MAX_NAME);
+    ASSERT_WRITE(this->connectedServer, cstr, WA_MAX_NAME);
 
     return ErrorCode::SUCCESS;
 }
+
 
 ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
                                       const std::string& listOfClientNames)
 {
     // Reality check - case should have already been caught
-    CHECK_N_RET((0 <= listOfClientNames.length() &&
+    ASSERT((0 <= listOfClientNames.length() &&
             listOfClientNames.length() <= WA_MAX_INPUT),
-           "Invalid clients list length", ErrorCode::FAIL);
+           "Invalid clients list length");
 
     // Init empty message
     CreateGroupMessage msg; // msg_type = CREATE_GROUP
@@ -222,11 +268,11 @@ ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
     msg.clientNames = listOfClientNames.c_str();
 
     // Send message
-    CHECK_WRITE_RET(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
-    CHECK_WRITE_RET(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
-    CHECK_WRITE_RET(this->connectedServer, msg.groupName, groupName.length());
-    CHECK_WRITE_RET(this->connectedServer, &msg.clientsLen, sizeof(msg.clientsLen));
-    CHECK_WRITE_RET(this->connectedServer, msg.clientNames, listOfClientNames.length());
+    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
+    ASSERT_WRITE(this->connectedServer, msg.groupName, groupName.length());
+    ASSERT_WRITE(this->connectedServer, &msg.clientsLen, sizeof(msg.clientsLen));
+    ASSERT_WRITE(this->connectedServer, msg.clientNames, listOfClientNames.length());
 
     return ErrorCode::SUCCESS;
 }
@@ -234,14 +280,14 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
 {
     // Validate arguments
     // Assert valid name
-    CHECK_N_RET(isValidName(targetName), ("Attempted to send message to target with invalid "
+    ASSERT(isValidName(targetName), ("Attempted to send message to target with invalid "
             "characters %s",
-            targetName), ErrorCode::FAIL);
-    CHECK_N_RET((0 <= targetName.length() &&
-            targetName.length() <= WA_MAX_NAME), "Invalid target name length", ErrorCode::FAIL);
-    CHECK_N_RET((0 <= message.length() &&
+            targetName));
+    ASSERT((0 <= targetName.length() &&
+            targetName.length() <= WA_MAX_NAME), "Invalid target name length");
+    ASSERT((0 <= message.length() &&
             message.length() <= WA_MAX_MESSAGE),
-           "Invalid message length", ErrorCode::FAIL);
+           "Invalid message length");
 
     // Init empty message
     SendMessage msg; // msg_type = SEND
@@ -253,11 +299,11 @@ ErrorCode Client::_RequestSendMessage(const std::string& targetName, const std::
     msg.msg = message.c_str();
 
     // Send message
-    CHECK_WRITE_RET(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
-    CHECK_WRITE_RET(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
-    CHECK_WRITE_RET(this->connectedServer, msg.targetName, targetName.length());
-    CHECK_WRITE_RET(this->connectedServer, &msg.messageLen, sizeof(msg.messageLen));
-    CHECK_WRITE_RET(this->connectedServer, msg.msg, message.length());
+    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->connectedServer, &msg.nameLen, sizeof(msg.nameLen));
+    ASSERT_WRITE(this->connectedServer, msg.targetName, targetName.length());
+    ASSERT_WRITE(this->connectedServer, &msg.messageLen, sizeof(msg.messageLen));
+    ASSERT_WRITE(this->connectedServer, msg.msg, message.length());
 
     return ErrorCode::SUCCESS;
 }
@@ -267,7 +313,7 @@ ErrorCode Client::_RequestWho() const
     WhoMessage msg; // msg_type = WHO
 
     // Send message
-    CHECK_WRITE_RET(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
 
     return ErrorCode::SUCCESS;
 }
@@ -277,7 +323,7 @@ ErrorCode Client::_RequestExit() const
     ExitMessage msg; // msg_type = Exit
 
     // Send message
-    CHECK_WRITE_RET(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
+    ASSERT_WRITE(this->connectedServer, &msg.mtype, sizeof(msg.mtype));
 
     return ErrorCode::SUCCESS;
 }
@@ -319,12 +365,9 @@ Client::Client(const std::string clientName, const std::string serverAddress, co
     this->name = clientName;
 
     if (ErrorCode::SUCCESS != this->_callSocket(serverAddress.c_str(), serverPort)){
-        print_fail_connection();
-        exit(1);
+        printf("Client failed to open socket with the server.\n");
+        exit(-1);
     }
-
-    // Yay! Client connected to server
-    print_connection();
 }
 
 void Client::_cleanUp() {
@@ -342,6 +385,7 @@ int main(int argc, char const *argv[]){
     unsigned short port =  std::stoi(argv[3], nullptr, 10); //todo unsigned short
 
     Client client{name, addr, port};
+
 
     client._Run();
 }
