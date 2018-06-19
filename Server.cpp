@@ -159,7 +159,7 @@ ErrorCode Server::_ParseName(int client_sock, std::string& /* OUT */ clientName)
     std::string temp;  // = "" is redundant
 
     // Read Name
-    if (SUCCESS != readFromSocket(client_sock, temp, WA_MAX_NAME)){
+    if (WA_MAX_NAME != readFromSocket(client_sock, temp, WA_MAX_NAME)){
         return ErrorCode::FAIL;
     };
 
@@ -491,7 +491,7 @@ ErrorCode Server::_HandleNewClient() {
     auto t = _getConnection();
     if (t < 0){
         print_error("_Run - connectNewClient", 2);
-        exit(-1);
+        exit(1);
     }
     std::string name;
     success = (SUCCESS == _ParseName(t, name));

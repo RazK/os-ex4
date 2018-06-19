@@ -118,7 +118,7 @@ ErrorCode Client::_ParseMessageFromServer(){
 }
 
 ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
-//    printf("HOST %connectedServer \n", hostname);
+
     this->host= gethostbyname (hostname);
     if (this->host == nullptr) {
         return ErrorCode::FAIL;
