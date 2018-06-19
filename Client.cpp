@@ -10,49 +10,6 @@
 #include <fstream>
 #include <boost/algorithm/string/join.hpp>
 
-//Client::Client() {
-//    char * addr{"aqua-81"};
-//    int port = 8080;
-//    if (ErrorCode::SUCCESS != this->_callSocket(addr, port)){
-//        printf("Err in socket calling\n");
-//        return ;
-//    }
-//    write(this->s, "finally, a message", 100);
-//    this->_readData(1024);
-//
-//    printf("Client read: %serverSocketClient", this->buf);
-//
-//    // TODO: REMOVE THESE LINES
-//    this->_sock_fd = open("/cs/+/usr/razkarl/os-ex4/client_test.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-//    if (this->_sock_fd == -1)
-//    {
-//        perror("open failed");
-//    }
-//    this->_create_group_fd = open("/cs/+/usr/razkarl/os-ex4/create_group.txt", O_CREAT | O_RDWR |
-//                                                                               O_NONBLOCK);
-//    if (this->_create_group_fd == -1)
-//    {
-//        perror("open create_group.txt failed");
-//    }
-//
-//    this->_send_fd = open("/cs/+/usr/razkarl/os-ex4/send.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-//    if (this->_send_fd == -1)
-//    {
-//        perror("open send.txt failed");
-//    }
-//
-//    this->_who_fd = open("/cs/+/usr/razkarl/os-ex4/who.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-//    if (this->_who_fd == -1)
-//    {
-//        perror("open who.txt failed");
-//    }
-//
-//    this->_exit_fd = open("/cs/+/usr/razkarl/os-ex4/exit.txt", O_CREAT | O_RDWR | O_NONBLOCK);
-//    if (this->_exit_fd == -1)
-//    {
-//        perror("open exit.txt failed");
-//    }
-//}
 Client::~Client() {}
 
 /* wrapper for short circuit protection against undefined behavior - removes last comma <,> in string */
@@ -91,7 +48,7 @@ ErrorCode Client::_ClientStdInput(){
             std::string clientsJoined;
             for (const auto &client : clients){
                 valid =     (isValidName(client) &&                         //legal name by alphanumeric and length
-                            (client != groupName) &&                        //This member-client's name isn't group name
+                          /*(client != groupName) && */                     //This member-client's name isn't group name
                             (client != this->name || clients.size() > 1) && //If this client in list then list is at least 2 long
                             (valid));                                       //Don't erase validity so far for all members
                 clientsJoined.append(client);
@@ -199,7 +156,6 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
     return responseCode;
 }
 
-
 ErrorCode Client::_readTaskResponse() const{
     char response [TASK_RESP_SIZE];
     bzero(response, TASK_RESP_SIZE);
@@ -218,8 +174,6 @@ ErrorCode Client::_readTaskResponse() const{
 
 }
 
-
-
 ErrorCode Client::_TellName(const std::string& myName){
     // Assert valid name
     ASSERT(isValidName(myName), ("Tried to tell invalid name %s", myName));
@@ -234,7 +188,6 @@ ErrorCode Client::_TellName(const std::string& myName){
 
     return ErrorCode::SUCCESS;
 }
-
 
 ErrorCode Client::_RequestCreateGroup(const std::string& groupName,
                                       const std::string& listOfClientNames)

@@ -29,6 +29,7 @@ typedef enum _TaskCase{
 struct clientWrapper{
     int sock;
     std::string name;
+    bool operator==(const clientWrapper& other)const{ return this->name == other.name;};
 };
 
 

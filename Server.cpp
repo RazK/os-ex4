@@ -304,43 +304,74 @@ ErrorCode Server::_HandleCreateGroup(const clientWrapper& client,
     return ErrorCode::SUCCESS; //invalid does not mean not success
 }
 
-ErrorCode Server::_HandleSendMessage(const clientWrapper& client,
+bool Server::isClientInGroup(const clientWrapper &clientW, const std::string &groupName){
+    auto target = std::find(this->groups[groupName].begin(), this->groups[groupName].begin(), clientW);
+    return !(target == this->groups[groupName].end());
+}
+
+ErrorCode Server::_HandleSendMessage(const clientWrapper& sender,
                                      const std::string& targetName,
                                      const std::string& message)
 {
     bool valid = (
-            isValidName(client.name) &&                         // client is legal name -- superfluous
-            _isClient(client.name) &&                           // client is recognized -- superfluous
+            isValidName(sender.name) &&                         // sender is legal name -- superfluous
+            _isClient(sender.name) &&                           // sender is recognized -- superfluous
             isValidName(targetName) &&                          // target has legal name
-            (_isClient(targetName) || _isGroup(targetName)) &&  // client is recognized
-            !message.empty()                                    // non empty message
+            (_isClient(targetName) || _isGroup(targetName)) &&  // sender is recognized
+            !message.empty() &&                                 // non empty message
+            !(sender.name == targetName)                        // not messaging self
                                                                 // TODO: valid message?
     );
 
     if (valid){
-
-//        auto fullMessage = padMessage(client.name, WA_MAX_NAME) + ":\n" + padMessage(message, WA_MAX_MESSAGE);
+//        auto fullMessage = padMessage(sender.name, WA_MAX_NAME) + ":\n" + padMessage(message, WA_MAX_MESSAGE);
         if (_isGroup(targetName)){
-            //TODO: write some function that sends to whole group
+            // Make sure sender is in group
+            if (!isClientInGroup(sender, targetName)){
+                valid = false;
+            }
+            else
+            {
+                // Send message to all group members (except self)
+                auto totalStatus = ErrorCode::SUCCESS;
+                for (const auto &client : this->groups[targetName]) {
+                    if ((client.name != sender.name)) {
+                        auto status = _SendToClient(sender.name, client, message);
+                        if (ErrorCode::SUCCESS != status) {
+                            totalStatus = FAIL;
+                        };
+                    }
+                }
+                return totalStatus;
+            }
         } else {
             auto targetClientW = this->_getClient(targetName);
-            ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
-            auto temp = client.name + ":";
-            temp.resize(WA_MAX_MESSAGE, 0);
-            ASSERT_WRITE(targetClientW.sock, temp.c_str(), temp.length());
-            temp = message;
-            temp.resize(WA_MAX_MESSAGE, 0);
-            ASSERT_WRITE(targetClientW.sock, temp.c_str(), temp.length());
+            auto status = _SendToClient(sender.name, targetClientW, message);
+            if (ErrorCode::SUCCESS != status){
+                return status;
+            };
         }
     }
 
-    print_send(true, valid, client.name, targetName, message);
+    print_send(true, valid, sender.name, targetName, message);
 
     auto response = getResponse(bool2TCase(valid));
 
-    ASSERT_WRITE(client.sock, response.c_str(), TASK_RESP_SIZE);
+    ASSERT_WRITE(sender.sock, response.c_str(), TASK_RESP_SIZE);
 
     return ErrorCode::SUCCESS; //invalid does not mean not success
+}
+
+ErrorCode Server::_SendToClient(const std::string senderName,
+                                const clientWrapper& targetClientW,
+                                const std::string message){
+    ASSERT(!targetClientW.name.empty(), "Got unexpected empty name in handle message" );
+    auto full_message = senderName;
+    full_message.append(": ");
+    full_message.append(message);
+    full_message.resize(WA_MAX_MESSAGE, 0);
+    ASSERT_WRITE(targetClientW.sock, full_message.c_str(), full_message.length());
+    return ErrorCode::SUCCESS;
 }
 
 ErrorCode Server::_HandleWho(const clientWrapper & client)

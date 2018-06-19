@@ -84,11 +84,17 @@ public:
     ErrorCode _HandleCreateGroup(const clientWrapper& client,
                                  const std::string& groupName,
                                  const std::string& listOfClientNames);
-    ErrorCode _HandleSendMessage(const clientWrapper& client,
+    ErrorCode _HandleSendMessage(const clientWrapper& sender,
                                  const std::string& targetName,
                                  const std::string& message);
     ErrorCode _HandleWho(const clientWrapper& client);
     ErrorCode _HandleExit(const clientWrapper& client);
+
+    ErrorCode _SendToClient(const std::string senderName,
+                                    const clientWrapper& targetClientW,
+                                    const std::string message);
+
+    bool isClientInGroup(const clientWrapper &clientW, const std::string &groupName);
 
     int _configFDSets();
 
