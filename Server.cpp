@@ -148,7 +148,7 @@ ErrorCode Server::_ParseMessage(const clientWrapper& client)
         }
         default:
         {
-            printf("Unrecognized message type\r\n");
+            //print_error("Unrecognized message type\r\n");
             return ErrorCode::FAIL;
         }
     }
@@ -375,9 +375,7 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
     for (auto &connectedClient : this->connectedClients) {
         allNames += connectedClient.name + ",";
     }
-    allNames[allNames.length() - 1] = '.';
-//    allNames.pop_back();
-//    allNames += ".";
+    allNames.pop_back();
     int i = 0;
     for (i ; i < ((long)allNames.length() - (long)WA_MAX_MESSAGE); i += WA_MAX_MESSAGE ){
         // write a slice of 256 at a time, w/o endline
@@ -471,8 +469,9 @@ void Server::_serverStdInput() {
     std::string command;
     std::getline (std::cin, command);
     if (command == (SERVER_INPUT_EXIT)){
-        this->_cleanUp();
         print_exit();
+        this->_cleanUp();
+        //todo: for connectedClient to exit(1)
         exit(0);
     } else {
         print_invalid_input();
@@ -482,7 +481,6 @@ void Server::_serverStdInput() {
 
 void Server::_cleanUp(){
     for (const auto &connectedClient : this->connectedClients) {
-        _flushToClient(connectedClient, EXIT_INDICATOR, false);
         close(connectedClient.sock);
     }
     close(this->welcomeClientsSocket);
@@ -493,7 +491,7 @@ ErrorCode Server::_HandleNewClient() {
     auto t = _getConnection();
     if (t < 0){
         print_error("_Run - connectNewClient", 2);
-        exit(1);
+        exit(-1);
     }
     std::string name;
     success = (SUCCESS == _ParseName(t, name));
