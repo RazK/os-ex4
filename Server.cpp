@@ -471,7 +471,6 @@ void Server::_serverStdInput() {
     if (command == (SERVER_INPUT_EXIT)){
         print_exit();
         this->_cleanUp();
-        //todo: for connectedClient to exit(1)
         exit(0);
     } else {
         print_invalid_input();
@@ -481,6 +480,7 @@ void Server::_serverStdInput() {
 
 void Server::_cleanUp(){
     for (const auto &connectedClient : this->connectedClients) {
+        this->_flushToClient(connectedClient, EXIT_INDICATOR, false);
         close(connectedClient.sock);
     }
     close(this->welcomeClientsSocket);
