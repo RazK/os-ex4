@@ -11,6 +11,7 @@ typedef enum _ErrorCode{
     FAIL = -1,
     SUCCESS = 0,
     NOT_IMPLEMENTED = 1,
+    SPECIAL = 3,
     BUG = 2
 } ErrorCode;
 

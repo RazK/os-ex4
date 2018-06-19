@@ -21,6 +21,8 @@ const int WA_MAX_FLUSH = WA_MAX_NAME + 2 /* ": " */ + WA_MAX_MESSAGE + 2 /* "\r\
 
 const char PAD = '#';
 
+const std::string EXIT_INDICATOR = "EXITEXITEXITEXITEXITEXITEXITEXITEXITEXIT";
+
 int max(int a, int b);
 
 typedef enum _TaskCase{
