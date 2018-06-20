@@ -52,6 +52,8 @@ ErrorCode Client::_ClientStdInput(){
                 auto valid = ((groupName != this->name) &&
                               // group name is unique from my name
                               (!clients.empty()) &&
+                              // group name is valid
+                              (isValidName(groupName)) &&
                               // group has at least 1 member (may be me...)
                               (clients.size() <=
                                WA_MAX_GROUP)        // group length doesnt exceed max (50)
@@ -62,7 +64,7 @@ ErrorCode Client::_ClientStdInput(){
                 for (const auto &client : clients) {
                     valid = (isValidName(client) &&
                              //legal name by alphanumeric and length
-                             /*(client != groupName) && */                     //This member-client's name isn't group name
+                             (client != groupName) &&                      //This member-client's name isn't group name
                              (client != this->name || clients.size() > 1) &&
                              //If this client in list then list is at least 2 long
                              (valid));                                       //Don't erase validity so far for all members
