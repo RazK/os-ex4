@@ -73,6 +73,7 @@ public: // TODO: Raz: Resume private after done debugging
     ErrorCode _RequestWho() const;
     ErrorCode _RequestExit() const;
     ErrorCode _readTaskResponse() const;
+    void _ExitAndNotifyServer() /* exits!!! */ ;
 
     ErrorCode _Run() ;
 

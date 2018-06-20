@@ -38,15 +38,14 @@ ErrorCode Server::_establish(unsigned short port) {
 
     //hostnet initialization
     if (gethostname(myname, WA_MAX_NAME) < 0){
-        printf("gethostname failure in server establish connection");
-        return ErrorCode::FAIL;
+        print_error("gethostname", errno);
+        exit(1);
     }
-//    printf("MY HOST NAME: %s \n", myname);
 
     this->host = gethostbyname(myname);
     if (this->host == nullptr){
-        printf("got nullptr for gethostbyname in server establish connection");
-        return ErrorCode::FAIL;
+        print_error("gethostbyname", h_errno);
+        exit(1);
     }
 
     //sockaddrr_in initialization
@@ -64,9 +63,8 @@ ErrorCode Server::_establish(unsigned short port) {
     /* create socket */
     this->welcomeClientsSocket = socket(AF_INET, SOCK_STREAM, 0);
     if(this->welcomeClientsSocket < 0){
-        printf("err whilst creating socket in server establish connection");
+        print_error("socket", errno);
         return ErrorCode::FAIL;
-
     }
 
     // add that socket to the set for select
@@ -74,7 +72,7 @@ ErrorCode Server::_establish(unsigned short port) {
     FD_SET(STDIN_FILENO, &this->openSocketsSet);
 
     if (bind(this->welcomeClientsSocket , (struct sockaddr *)&(this->serve_addr) , sizeof(struct sockaddr_in)) < 0){
-        printf("Error in bind. Socket in use or not properly closed?\r\n");
+        print_error("bind", errno);
         return ErrorCode::FAIL;
 
     }
@@ -82,7 +80,7 @@ ErrorCode Server::_establish(unsigned short port) {
 
     /* max # of queued connects */
     if (listen(this->welcomeClientsSocket, maxNumConnected) < 0){
-        printf("failed to listen in server establish connection");
+        print_error("listen", errno);
         return ErrorCode::FAIL;
     }
 
@@ -92,7 +90,7 @@ ErrorCode Server::_establish(unsigned short port) {
 ErrorCode Server::_closeConnection(int socket){
     FD_CLR(socket, &this->openSocketsSet);
     if (0 != close(socket)){
-        perror("Failed to close socket");
+        print_error("close", errno);
         return ErrorCode::FAIL;
     }
     auto testIfRemove = [socket](clientWrapper cur){return cur.sock == socket;};
@@ -107,12 +105,21 @@ ErrorCode Server::_ParseMessage(const clientWrapper& client)
 {
     auto socket = client.sock;
     msg_type mtype = _command_type::INVALID;
-    if(0 == _readData(socket, &mtype, sizeof(msg_type)))
-    {
-        printf("%s disconnected.\r\n", client.name.c_str()); // https://stackoverflow
-        // .com/questions/2416944/can-read-function-on-a-connected-socket-return-zero-bytes
-        return this->_closeConnection(socket);
+
+    auto read = _readData(socket, &mtype, sizeof(msg_type));
+
+    if (read < 0){
+        print_error("read", errno);
+        return ErrorCode::FAIL;
     }
+
+    if(0 == read)
+    {
+        //printf("%s disconnected.\r\n", client.name.c_str()); // https://stackoverflow
+        // .com/questions/2416944/can-read-function-on-a-connected-socket-return-zero-bytes
+        return this->_HandleExit(client);
+    }
+
     switch (mtype)
     {
         case command_type::CREATE_GROUP:
@@ -439,8 +446,7 @@ ErrorCode Server::_Run() {
         int max_fd = this->_configFDSets();
         auto readfds = this->openSocketsSet;
         if (select(max_fd+1, &readfds, nullptr, nullptr, nullptr) < 0) {
-            print_error("_Run - select", 1);
-            exit(-1);
+            print_error("select", errno);
         }
         if (FD_ISSET(this->welcomeClientsSocket, &readfds)) {
             //will also add the client to the clientsfds
@@ -491,7 +497,7 @@ ErrorCode Server::_HandleNewClient() {
     bool success = false;
     auto t = _getConnection();
     if (t < 0){
-        print_error("_Run - connectNewClient", 2);
+        //print_error("_Run - connectNewClient", 2);
         return ErrorCode::FAIL;
     }
     std::string name;
@@ -562,7 +568,7 @@ int main(int argc, char const *argv[]){
     // assert legal usage of a single parameter after prog name
     if (argc != 2){
         print_server_usage();
-        exit(-1);
+        exit(1);
     }
 
     // read port number and assert legal - ports positive and are bounded by ushort max
@@ -571,7 +577,7 @@ int main(int argc, char const *argv[]){
 
     if (port < 0 or port > USHRT_MAX){
         print_server_usage();
-        exit(-1);
+        exit(1);
     }
     Server server{(unsigned short)port};
     print_connection();
