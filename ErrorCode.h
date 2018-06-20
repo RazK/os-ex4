@@ -11,8 +11,9 @@ typedef enum _ErrorCode{
     FAIL = -1,
     SUCCESS = 0,
     NOT_IMPLEMENTED = 1,
+    BUG = 2,
     SPECIAL = 3,
-    BUG = 2
+    FAIL_DUP_NAME = 4
 } ErrorCode;
 
 #ifdef DEBUG

@@ -138,11 +138,13 @@ ErrorCode Client::_callSocket(const char *hostname, unsigned short port) {
         return ErrorCode::FAIL;
     }
 
+    // Send name to server
     bool nameTold = (SUCCESS == _TellName(this->name));
 
+    // Get server response (does he like my name? amen)
     auto responseCode = this->_readTaskResponse();
-    if (nameTold && responseCode == ErrorCode::SUCCESS){
-        return ErrorCode::SUCCESS;
+    if (nameTold){
+        return responseCode;
     }
 
     // Oh no...
@@ -162,6 +164,9 @@ ErrorCode Client::_readTaskResponse() const{
     }
     else if (TASK_FAILURE == temp){
         return ErrorCode::FAIL;
+    }
+    else if (TASK_USED_NAME == temp){
+        return ErrorCode::FAIL_DUP_NAME;
     }
     return ErrorCode::BUG;
 
@@ -295,10 +300,16 @@ ErrorCode Client::_Run() {
 
 Client::Client(const std::string clientName, const std::string serverAddress, const unsigned short serverPort) {
     this->name = clientName;
-
-    if (ErrorCode::SUCCESS != this->_callSocket(serverAddress.c_str(), serverPort)){
-        print_fail_connection();
-        exit(1);
+    auto socketStatus = this->_callSocket(serverAddress.c_str(), serverPort);
+    if (ErrorCode::SUCCESS != socketStatus){
+        if (ErrorCode::FAIL_DUP_NAME == socketStatus){
+            print_dup_connection();
+            exit(1);
+        }
+        else {
+            print_fail_connection();
+            exit(1);
+        }
     }
 
     // Yay! Client connected to server

@@ -427,6 +427,7 @@ int Server::_getConnection() {
     int newConnection = accept(this->welcomeClientsSocket, nullptr, nullptr);
 
     if (newConnection < 0){
+        print_error("accept", newConnection);
         return -1;
     }
     return newConnection;
@@ -491,10 +492,10 @@ ErrorCode Server::_HandleNewClient() {
     auto t = _getConnection();
     if (t < 0){
         print_error("_Run - connectNewClient", 2);
-        exit(-1);
+        return ErrorCode::FAIL;
     }
     std::string name;
-    success = (SUCCESS == _ParseName(t, name));
+    success = (ErrorCode::SUCCESS == _ParseName(t, name));
 
     if (success) {
         if (!(this->_isGroup(name) || this->_isClient(name))) {
@@ -504,10 +505,10 @@ ErrorCode Server::_HandleNewClient() {
         } else {  // this name is already in use
             CHECK_WRITE_RET(t, TASK_USED_NAME, TASK_RESP_SIZE);
         }
-    } else{
+    } else {
         CHECK_WRITE_RET(t, TASK_FAILURE, TASK_RESP_SIZE);
     }
-    return SUCCESS;
+    return ErrorCode::SUCCESS;
 }
 
 bool Server::_isClient(const std::string& name) const{
