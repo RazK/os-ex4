@@ -1,0 +1,79 @@
+heimy4prez, razkarl
+Shimon Heimowitz (203631676), Raz Karl (311143127)
+EX: 2
+
+FILES:
+README          -- This file
+Client.cpp      -- Implementation of Client.h
+Client.h        -- Header for our Client class
+Server.cpp      -- Implementation of our Server class
+Server.h        -- Header for our Server class
+Protocol.h      -- Specifications of our Client<->Server protocol
+ErrorCodes.h    -- Macros and enums for error codes
+whatsappio.cpp  -- Header for school's whatsappio header
+whatsappio.h    -- School lib for parsing and printing info
+
+REMARKS:
+Please take a look at Protocol.h and get an impression of our carefully designed protocol!
+Security was a great consideration in the design.
+
+===========
+= ANSWERS =
+===========
+
+------
+- Q1 -
+------
+General changes:
+    * Add LEAVE_GROUP to whatsappio commands enum
+    * Add logic for parsing "leave_group <group_name>" to whatsappio
+    * Add LEAVE_GROUP message to Protocol.h
+Changes to client side:
+    * Add case handler for LEAVE_GROUP in Client::_ClientStdInput()
+    * Add a call to send LEAVE_GROUP to server in that handler
+Changes to server side:
+    * Add logic for parsing LEAVE_GROUP protocol messages
+    * Add a case handler for LEAVE_GROUP (validates the request and then simply removes the
+    required client from the relevant group)
+
+------
+- Q2 -
+------
+TCP is CONNECTION oriented. We are communicating with several clients and desire the following
+things:
+*   Confirmation of messages arriving at their destiny (verified at layer 2 by TCP, not verified
+using 'best effort' UDP)
+*   Separation of communication channels - each client gets their own socket allocated by the
+server and seamless to the client, they can't send messages on behalf of each other and pretend to
+have different identities than those they had when they registered (well, they can, but that's
+harder now)
+
+------
+- Q3 -
+------
+Example 1 - Online streaming
+We mostly care about NOT BUFFERING ALL THE TIME, and less about missing a frame or two. Therefore
+we don't want the movie get stuck upon small network errors, instead we prefer to drop some packets
+ and just keep sending data
+
+Example 2 - Stock Market
+We want to get the data as fast as possible and don't really care if we lost a few updates as long
+as we keep getting new data, we don't want to spend time on handshakes and connection establishment
+ - let our competitors establish a connection and open sockets while we get all the data before
+ them and take over wall street!
+
+------
+- Q4 -
+------
+Two approaches:
+1) Scheduled server backups - every now and then, write all the server logs into a file (non
+volatile memory) when restarting - read all that data and keeping going from there. We will lose
+all the data since the last backup, but if we backup often with a separate thread we can get better
+ at recovering with little damage to server availability.
+
+2) Backup on clients - the clients can withstand a server crash and even get notified on that
+(check out our recognition of server crashes for example)
+Upon recognizing a server crash, clients can store the data they posses and tell it to the server
+next time they log in. This is however an open invitation for security breaches since the secure
+approach must never rely on the clients and always view them as potential attackers who seek to
+breach the Server.
