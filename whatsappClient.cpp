@@ -4,11 +4,11 @@
 
 #include <unistd.h>
 #include <fcntl.h>
-#include "Client.h"
+#include "whatsappClient.hpp"
 
 
 #include <fstream>
-#include <boost/algorithm/string/join.hpp>
+//#include <boost/algorithm/string/join.hpp>
 
 Client::~Client() {}
 
@@ -318,7 +318,6 @@ ErrorCode Client::_Run() {
             continue;
         }
     }
-    return FAIL;
 }
 
 Client::Client(const std::string clientName, const std::string serverAddress, const unsigned short serverPort) {

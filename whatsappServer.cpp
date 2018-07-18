@@ -4,7 +4,7 @@
 //
 
 
-#include "Server.h"
+#include "whatsappServer.hpp"
 
 Server::Server(unsigned short port) {
     FD_ZERO(&this->openSocketsSet); // Init the set of sockets
@@ -143,19 +143,19 @@ ErrorCode Server::_ParseMessage(const clientWrapper& client)
         }
         case command_type::WHO:
         {
-            bool success = (SUCCESS == _HandleWho(client));
+            _HandleWho(client);
             print_who_server(client.name);
             break;
         }
         case command_type::EXIT:
         {
-            bool success = (SUCCESS == _HandleExit(client));
+            _HandleExit(client);
             print_exit(true, client.name);
             break;
         }
         default:
         {
-            //print_error("Unrecognized message type\r\n");
+//            print_error("Unrecognized message type\r\n");
             return ErrorCode::FAIL;
         }
     }
@@ -384,7 +384,7 @@ ErrorCode Server::_HandleWho(const clientWrapper & client)
     }
     allNames.pop_back();
     int i = 0;
-    for (i ; i < ((long)allNames.length() - (long)WA_MAX_MESSAGE); i += WA_MAX_MESSAGE ){
+    for ( ; i < ((long)allNames.length() - (long)WA_MAX_MESSAGE); i += WA_MAX_MESSAGE ){
         // write a slice of 256 at a time, w/o endline
         this->_flushToClient(client, allNames.substr((unsigned long)i, WA_MAX_MESSAGE ), false);
     }
@@ -400,7 +400,7 @@ ErrorCode Server::_HandleExit(const clientWrapper& client)
 
     if (legal){
         auto iter = this->connectedClients.begin();
-        for (iter ; iter != this->connectedClients.end(); ++iter) {
+        for ( ; iter != this->connectedClients.end(); ++iter) {
             if ((*iter).name == client.name){
                 break;
             }
@@ -409,7 +409,7 @@ ErrorCode Server::_HandleExit(const clientWrapper& client)
         this->connectedClients.erase(iter);               // rm from clients
         for (auto &group : this->groups){
             auto iter2 = group.second.begin();    // iterate over group name vector (in second)
-            for (iter2 ; iter2 != group.second.end(); ++iter2) {
+            for ( ; iter2 != group.second.end(); ++iter2) {
                 if ((*iter2).name == client.name){
                     break;
                 }
@@ -572,7 +572,7 @@ int main(int argc, char const *argv[]){
     }
 
     // read port number and assert legal - ports positive and are bounded by ushort max
-    size_t * idx;
+//    size_t * idx;
     auto port = atoi(argv[1]);
 
     if (port < 0 or port > USHRT_MAX){

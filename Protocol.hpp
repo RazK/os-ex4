@@ -6,7 +6,7 @@
 #define OSEX4_PROTOCOL_H
 
 #include <cstdint>
-#include "whatsappio.h"
+#include "whatsappio.hpp"
 #include <unistd.h>
 #include <sstream>
 
@@ -130,8 +130,6 @@ void split(const std::string& string,
            std::vector<std::string>& result/*OUT */ );
 
 bool isValidList(const std::vector<std::string>& names);
-
-std::string padMessage(std::string string, int resultSize);
 
 std::string getResponse(TaskCase taskCase);
 TaskCase bool2TCase(bool valid);

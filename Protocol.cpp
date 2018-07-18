@@ -2,7 +2,7 @@
 // Created by razkarl on 6/16/18.
 //
 
-#include "Protocol.h"
+#include "Protocol.hpp"
 
 int max(int a, int b){
     return ((a) >= (b) ? (a) : (b));
@@ -62,7 +62,7 @@ bool isValidList(const std::vector<std::string>& names){
 }
 
 int _readData(int socket, void * buf , size_t n){
-    buf = (char *) buf;
+    auto c_buf = (char *) buf;
     int bcount;
     /* counts bytes read */
     ssize_t br;
@@ -71,10 +71,10 @@ int _readData(int socket, void * buf , size_t n){
     br = 0;
     memset(buf, 0, n);
     while (bcount < n) { /* loop until full buffer */
-        br = read(socket, buf, (size_t) n - bcount);
+        br = read(socket, c_buf, (size_t) n - bcount);
         if ((br > 0)) {
             bcount += br;
-            buf += br; //Todo: why add val to char *?
+            c_buf += br; //Todo: why add val to char *?
         }
         if (br < 1) {
             return (br);
@@ -104,12 +104,4 @@ int readFromSocket(int socket, std::string &outbuf, int count){
         }
     }
     return (bcount);
-}
-
-std::string padMessage(std::string string, int resultSize) {
-    auto len = string.length();
-    for (int _ = 0; _ < resultSize - len; ++_ ){
-        string += PAD;
-    }
-    return string;
 }

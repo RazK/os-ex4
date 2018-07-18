@@ -5,7 +5,7 @@
 #ifndef OSEX4_ERRORCODE_H
 #define OSEX4_ERRORCODE_H
 #include <iostream>
-#include "Protocol.h"
+#include "Protocol.hpp"
 
 typedef enum _ErrorCode{
     FAIL = -1,

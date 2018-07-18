@@ -18,15 +18,15 @@
 #include <map>
 
 
-#include "whatsappio.h"
-#include "ErrorCode.h"
-#include "Protocol.h"
+#include "whatsappio.hpp"
+#include "ErrorCode.hpp"
+#include "Protocol.hpp"
 
 
 #include <unistd.h>
 #include <algorithm>
 
-#include "Protocol.h"
+#include "Protocol.hpp"
 
 
 const int maxNumConnected = 10;

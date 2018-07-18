@@ -28,9 +28,9 @@
 #include <cstdio>
 #include <netinet/in.h>
 
-#include "Protocol.h"
-#include "ErrorCode.h"
-#include "whatsappio.h"
+#include "Protocol.hpp"
+#include "ErrorCode.hpp"
+#include "whatsappio.hpp"
 
 
 class Client{
@@ -56,8 +56,6 @@ private:
     fd_set  openSocketsSet;
 
     int connectedServer;
-
-    char* buf;
 
     std::string name;
 
